@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Draysin Jones </title>
+  <meta name="description" content="Personal bio, links, and projects." />
+  <style>
+    :root {
+      --bg: #0b0c10;
+      --panel: #111318;
+      --text: #e9eef2;
+      --muted: #9aa4af;
+      --accent: #6ee7ff;
+      --ring: rgba(110,231,255,.35);
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #f6f7fb;
+        --panel: #ffffff;
+        --text: #131722;
+        --muted: #5b6573;
+        --accent: #0077ff;
+        --ring: rgba(0,119,255,.2);
+        --shadow: 0 10px 30px rgba(0,0,0,.08);
+      }
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+      background: radial-gradient(1000px 600px at 10% -20%, rgba(110,231,255,.08), transparent),
+                  radial-gradient(1200px 800px at 110% 10%, rgba(0,119,255,.08), transparent), var(--bg);
+      color: var(--text);
+    }
+
+    .container { max-width: 980px; margin: 40px auto 80px; padding: 0 20px; }
+
+    .card {
+      background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,0)) , var(--panel);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 20px; box-shadow: var(--shadow); padding: 26px; backdrop-filter: blur(6px);
+    }
+
+    .top {
+      display: grid; grid-template-columns: 140px 1fr; gap: 22px; align-items: center;
+    }
+
+    .avatar {
+      width: 140px; height: 140px; border-radius: 12px; object-fit: cover;
+      border: 2px solid rgba(255,255,255,.1); box-shadow: 0 6px 18px rgba(0,0,0,.25);
+      background: #2a2f39;
+    }
+    .name { font-size: clamp(28px, 4vw, 40px); line-height: 1.1; margin: 0; }
+    .tagline { margin: 8px 0 0; color: var(--muted); font-size: clamp(14px, 2vw, 18px); }
+
+    .links { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 10px; }
+    .chip {
+      display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 999px;
+      background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); text-decoration: none; color: var(--text);
+      transition: transform .08s ease, background .2s ease, border-color .2s ease;
+    }
+    .chip:hover { transform: translateY(-1px); background: rgba(255,255,255,.1); border-color: var(--ring); box-shadow: 0 0 0 6px var(--ring); }
+
+    .grid { display: grid; grid-template-columns: 2fr 1fr; gap: 22px; margin-top: 22px; }
+    .section { padding: 18px; border-radius: 16px; border: 1px solid rgba(255,255,255,.08); background: rgba(0,0,0,.12); }
+    @media (prefers-color-scheme: light) { .section { background: rgba(255,255,255,.8); } }
+    .section h2 { margin: 0 0 10px; font-size: 18px; letter-spacing: .2px; }
+    .section p { margin: 0 0 10px; color: var(--muted); }
+
+    .list { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
+    .list li { padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,.08); background: rgba(0,0,0,.06); }
+    @media (prefers-color-scheme: light) { .list li { background: rgba(0,0,0,.02); } }
+    .list a { color: var(--text); text-decoration: none; }
+    .list a:hover { text-decoration: underline; }
+
+    .footer { margin-top: 22px; text-align: center; color: var(--muted); font-size: 13px; }
+
+    @media (max-width: 760px) {
+      .top { grid-template-columns: 100px 1fr; }
+      .avatar { width: 100px; height: 100px; }
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- HEADER CARD -->
+    <header class="card">
+      <div class="top">
+        <!-- Square photo (replace src with your file) -->
+        <img class="avatar" src="https://media.discordapp.net/attachments/875933410495954956/1406415349129285733/9C418B68-300A-4584-9B04-24D1118962FD.jpg?ex=68a261dd&is=68a1105d&hm=ecf61b83d664167bf05140cf578b13ab7fcc93f273006d27923b86cc7da98014&=&format=webp&width=978&height=978" alt="Your Name portrait" />
+        <div>
+          <h1 class="name">Dray</h1>
+          <p class="tagline">Short tagline — what you do, what you love, or a witty line.</p>
+          <nav class="links" aria-label="Primary links">
+            <a class="chip" href="#about">About</a>
+            <a class="chip" href="#projects">Projects</a>
+            <a class="chip" href="#contact">Contact</a>
+            <a class="chip" href="https://www.instagram.com/drays1n/" target="_blank" rel="noreferrer">Instagram</a>
+            <a class="chip" href="https://www.youtube.com/@somekanyelover" target="_blank" rel="noreferrer">YouTube</a>
+          </nav>
+        </div>
+      </div>
+    </header>
+
+    <!-- CONTENT GRID -->
+    <main class="grid">
+      <section id="about" class="section">
+        <h2>About</h2>
+        <p>I put God and Christ first in my life. I really love (Kan)Ye and his music. Roller skating is one of my favorite things to do. I also enjoy just hanging out with my friends.</p>
+        <p>I also have a (Kan)Ye edit/remix channel</p>
+      </section>
+
+      <aside class="section">
+        <h2>Quick Facts</h2>
+        <ul class="list">
+          <li>📍 Based in Georgia</li>
+          <li>🎧 Currently into: Kanye</li>
+        </ul>
+      </aside>
+
+      <section id="projects" class="section">
+        <h2>Projects / Stuff</h2>
+        <ul class="list">
+          <li>
+            <strong>Project Title</strong> — Working on (Kan)Ye mixes <a href="#">View</a>
+          </li>
+          <li>
+            <strong>Another Thing</strong> — Learning more about God <a href="#">View</a>
+          </li>
+          <li>
+            <strong>Favorite Video</strong> — https://www.instagram.com/reel/DNUdl5uO9Dp/<a href="#">Watch</a>
+          </li>
+        </ul>
+      </section>
+
+      <section class="section">
+        <h2>Links</h2>
+        <ul class="list">
+          <li><a href="https://linktr.ee/DRAYS1N" target="_blank" rel="noreferrer">All Links</a></li>
+        </ul>
+      </section>
+
+      <section id="contact" class="section" style="grid-column: 1 / -1;">
+        <h2>Contact</h2>
+        <p>Best way to reach me: <a href="mailto:you@example.com">jonesdraysinwork@gmail.com</a> — or DM me on Instagram.</p>
+      </section>
+    </main>
+
+    <p class="footer">© <span id="year"></span> Draysin. Built with plain HTML + CSS. No frameworks. 🙌</p>
+  </div>
+
+  <script>
+    document.getElementById('year').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>
