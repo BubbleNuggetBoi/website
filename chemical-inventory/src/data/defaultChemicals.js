@@ -6,9 +6,10 @@
  * first load, and any number of new chemicals can be added at runtime.
  */
 
+/** [productNumber, name, contentsColor?] — colors are editable in the app. */
 const GALLONS = [
-  ['138', 'SERVPRO Green'],
-  ['140', 'SERVPRO Orange'],
+  ['138', 'SERVPRO Green', '#1f7a3f'],
+  ['140', 'SERVPRO Orange', '#d4650f'],
   ['155', 'Wintergreen Deodorizer'],
   ['204', 'Glass Cleaner, Super-con'],
   ['252', 'Shampoo Super-con'],
@@ -37,7 +38,7 @@ const CANS = [
   ['', 'Kilz Mold'],
 ]
 
-/** Gallons fill shelves 1-3, cans live on shelf 4. */
+/** Gallons fill shelves 1-3 of their bay; cans start on shelf 1 of theirs. */
 const GALLONS_PER_SHELF = 6
 
 /**
@@ -45,18 +46,20 @@ const GALLONS_PER_SHELF = 6
  * callers can never mutate the module-level template.
  */
 export function createDefaultChemicals(now = new Date().toISOString()) {
-  const gallons = GALLONS.map(([productNumber, name], index) => ({
+  const gallons = GALLONS.map(([productNumber, name, color], index) => ({
     productNumber,
     name,
+    color: color ?? '',
     containerType: 'gallon',
     shelf: String(Math.floor(index / GALLONS_PER_SHELF) + 1),
   }))
 
-  const cans = CANS.map(([productNumber, name]) => ({
+  const cans = CANS.map(([productNumber, name, color]) => ({
     productNumber,
     name,
+    color: color ?? '',
     containerType: 'can',
-    shelf: '4',
+    shelf: '1',
   }))
 
   return [...gallons, ...cans].map((product, index) => ({
@@ -67,6 +70,7 @@ export function createDefaultChemicals(now = new Date().toISOString()) {
     quantity: 0,
     lowStockThreshold: 2,
     shelf: product.shelf,
+    color: product.color,
     createdAt: now,
     updatedAt: now,
   }))

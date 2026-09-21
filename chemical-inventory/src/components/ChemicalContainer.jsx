@@ -1,62 +1,30 @@
 import { ContainerIcon } from './ContainerArt.jsx'
-import { isLowStock, isOutOfStock, labelColorFor } from '../lib/inventory.js'
-
-const LABEL_MAX_LINES = 2
-const LABEL_MAX_CHARS = 9
-
-/**
- * Wraps a product name onto the sticker the way a warehouse label would:
- * short all-caps lines, abbreviated rather than shrunk to nothing. The full
- * name is always shown in the caption under the container.
- */
-function labelLines(name) {
-  const words = name.toUpperCase().split(/\s+/).filter(Boolean)
-  const lines = []
-
-  for (const word of words) {
-    const current = lines[lines.length - 1]
-    if (current && `${current} ${word}`.length <= LABEL_MAX_CHARS) {
-      lines[lines.length - 1] = `${current} ${word}`
-    } else if (lines.length < LABEL_MAX_LINES) {
-      lines.push(word)
-    } else {
-      // Ran out of lines: mark the label as abbreviated and stop.
-      const last = lines[LABEL_MAX_LINES - 1]
-      lines[LABEL_MAX_LINES - 1] = `${last.replace(/[.\u2026]+$/, '')}\u2026`
-      break
-    }
-  }
-
-  return lines.map((line) =>
-    line.length > LABEL_MAX_CHARS + 2 ? `${line.slice(0, LABEL_MAX_CHARS + 1)}\u2026` : line,
-  )
-}
+import {
+  CONTAINER_ART,
+  CONTAINER_LABELS,
+  contentsColorFor,
+  isLowStock,
+  isOutOfStock,
+  labelColorFor,
+  labelLines,
+  labelTextSize,
+} from '../lib/inventory.js'
 
 /**
- * Sticker text is sized off the longest line so it always fits the label,
- * expressed in container query units so it scales with the container art.
- */
-function labelNameSize(lines) {
-  const longest = lines.reduce((max, line) => Math.max(max, line.length), 1)
-  return `${Math.max(6, Math.min(10.5, 78 / longest)).toFixed(2)}cqw`
-}
-
-const TINTS = {
-  gallon: '#dfe5ea',
-  can: '#b4bec8',
-}
-
-/**
- * One product on the rack. Always a single container regardless of how many
- * units are in stock; the count lives in the quantity badge.
+ * One product on the shelf. Always a single container no matter how many units
+ * are in stock; the count lives in the quantity badge.
  */
 export default function ChemicalContainer({ chemical, onSelect }) {
   const low = isLowStock(chemical)
   const empty = isOutOfStock(chemical)
   const color = labelColorFor(chemical)
-  const lines = labelLines(chemical.name)
+  const contents = contentsColorFor(chemical)
+  const art = CONTAINER_ART[chemical.containerType] ?? CONTAINER_ART.gallon
+  const lines = labelLines(chemical.name, chemical.containerType)
+  const { nameSize, numberSize } = labelTextSize(lines, chemical.productNumber, chemical.containerType)
 
   const statusLabel = empty ? 'out of stock' : low ? 'low stock' : 'in stock'
+  const typeLabel = CONTAINER_LABELS[chemical.containerType]?.one ?? 'Container'
 
   return (
     <button
@@ -65,17 +33,22 @@ export default function ChemicalContainer({ chemical, onSelect }) {
       onClick={() => onSelect(chemical.id)}
       aria-label={`${chemical.name}${
         chemical.productNumber ? `, product number ${chemical.productNumber}` : ''
-      }, ${chemical.quantity} in stock, ${statusLabel}. Open details.`}
+      }, ${typeLabel}, ${chemical.quantity} in stock, ${statusLabel}. Open details.`}
     >
-      <div className="container-card__art">
-        <ContainerIcon containerType={chemical.containerType} tint={TINTS[chemical.containerType]} />
+      <div className="container-card__art" style={{ '--art-aspect': art.aspect }}>
+        <ContainerIcon containerType={chemical.containerType} contents={contents} />
 
         <span
-          className={`container-card__label container-card__label--${chemical.containerType}`}
+          className="container-card__label"
           style={{
             '--label-bg': color.bg,
             '--label-ink': color.ink,
-            '--label-name-size': labelNameSize(lines),
+            '--label-left': `${art.label.left}%`,
+            '--label-right': `${art.label.right}%`,
+            '--label-top': `${art.label.top}%`,
+            '--label-height': `${art.label.height}%`,
+            '--label-name-size': `${nameSize}cqh`,
+            '--label-number-size': `${numberSize}cqh`,
           }}
         >
           {chemical.productNumber ? (
@@ -100,9 +73,6 @@ export default function ChemicalContainer({ chemical, onSelect }) {
         <span className="container-card__name">{chemical.name}</span>
         <span className="container-card__meta">
           {chemical.productNumber ? <span className="pill">#{chemical.productNumber}</span> : null}
-          <span className="pill pill--type">
-            {chemical.containerType === 'can' ? 'Can' : 'Gallon'}
-          </span>
           <span className="container-card__count">&times; {chemical.quantity}</span>
         </span>
         {low ? (

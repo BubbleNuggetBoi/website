@@ -1,9 +1,9 @@
 # SERVPRO Warehouse Chemical Inventory
 
 A visual chemical inventory for the warehouse floor. The main screen is a
-steel rack: every product sits on a shelf as a gallon jug or a can with a
-quantity badge, so an employee can walk the warehouse, tap a container, and
-count it in or out on a phone, tablet, or desktop.
+steel rack: every product stands in its bay as a gallon jug, a can, or a
+barrel with a quantity badge, so an employee can walk the warehouse, tap a
+container, and count it in or out on a phone, tablet, or desktop.
 
 ## Running it
 
@@ -19,11 +19,20 @@ npm test         # unit tests for the inventory logic (node:test)
 
 - One container per product on the rack, never one per unit. 18 gallons of
   SERVPRO Green is a single jug with an `18` badge.
+- The rack is split into a bay per container type — Gallons, Cans, and a floor
+  area for Barrels — each with its own shelf levels. On wide screens the cans
+  and barrels bays sit side by side beneath the gallons; on a phone the bays
+  stack.
 - Shelf levels are derived from the products themselves, so adding a chemical
-  on shelf 7 creates shelf 7. Any number of products and shelves is supported;
-  nothing about the rack is hard-coded to the current catalog.
+  on shelf 7 creates shelf 7 in that bay. Any number of products and shelves is
+  supported; nothing about the rack is hard-coded to the current catalog.
 - Each row of a shelf gets its own deck board, so on a phone the rack grows
   taller instead of shrinking containers below a tappable size.
+- Each product can carry a contents color, which tints the container and its
+  label: a pink chemical reads as pink on the shelf. Jugs are translucent, so
+  the color shows through the plastic and deepens below the fill line; cans and
+  barrels take the color on the body. Products with no color set keep neutral
+  plastic or steel and a stable label color.
 - A product is low stock when `quantity <= lowStockThreshold`. That drives the
   badge color, the container flag, the toolbar count, and the Low Stock filter.
 - Every quantity change writes a history entry (`5 → 8` with a timestamp),
@@ -36,8 +45,9 @@ npm test         # unit tests for the inventory logic (node:test)
 ```
 src/
   data/defaultChemicals.js   seed catalog (the 18 gallons + 7 cans, at qty 0)
-  lib/inventory.js           pure domain logic: filtering, grouping, low stock,
-                             label colors, formatting, CSV/JSON export
+  lib/inventory.js           pure domain logic: filtering, bay/shelf grouping,
+                             low stock, contents colors and label contrast,
+                             label text fitting, formatting, CSV/JSON export
   lib/inventoryReducer.js    pure state machine for every mutation + history
   lib/storage.js             localStorage read/write, defensive parsing, downloads
   hooks/useInventory.js      binds the reducer to storage; the only bridge
@@ -45,10 +55,12 @@ src/
   components/
     Header.jsx               top toolbar: counts, History, Settings, Add
     SearchAndFilters.jsx     search box + All / Gallons / Cans / Low Stock
-    ChemicalRack.jsx         rack frame, uprights, shelf levels
-    Shelf.jsx                one shelf level, wraps into rows with deck boards
+    ChemicalRack.jsx         the yard: lays out one bay per container type
+    RackSection.jsx          one bay: sign, frame, uprights, shelf levels
+    Shelf.jsx                one shelf level (or floor row), wrapping into
+                             rows that each get a deck board
     ChemicalContainer.jsx    one product on the shelf (art, label, badge, flags)
-    ContainerArt.jsx         SVG gallon jug and can silhouettes
+    ContainerArt.jsx         SVG jug, can and barrel silhouettes
     ChemicalModal.jsx        product window: facts, stock controls, history
     StockControls.jsx        large -1 / +1 steppers and Set Quantity
     AddChemicalModal.jsx     add a new chemical to the rack
@@ -70,10 +82,11 @@ src/
   id: 'seed-1',
   productNumber: '138',
   name: 'SERVPRO Green',
-  containerType: 'gallon',   // 'gallon' | 'can'
+  containerType: 'gallon',   // 'gallon' | 'can' | 'barrel'
   quantity: 0,
   lowStockThreshold: 2,
   shelf: '1',
+  color: '#1f7a3f',          // contents color; '' when not set
   createdAt: '2026-09-21T14:00:00.000Z',
   updatedAt: '2026-09-21T14:00:00.000Z',
 }
@@ -102,6 +115,17 @@ The UI never touches storage directly. To move off `localStorage`:
    and keeps the reducer as the optimistic local cache. Component props do not
    change.
 
-`npm test` covers the logic layer (51 tests): seeding, quantity math and
-clamping, history recording and capping, search/filter, shelf grouping and
-sorting, CSV export, and recovery from corrupt saved data.
+### Adding a container type
+
+Container types are data, not special cases. Add the name to `CONTAINER_TYPES`
+with an entry in `CONTAINER_LABELS` (names and the unit word) and
+`CONTAINER_ART` (the art's aspect ratio and where its label sits), add a filter
+to `FILTERS`, and draw the silhouette in `ContainerArt.jsx`. The rack grows a
+bay for it, the forms offer it, and the filter works — `src/test` asserts that
+every entry in `FILTERS` actually narrows the list, so a half-wired type fails
+the suite.
+
+`npm test` covers the logic layer (70 tests): seeding, quantity math and
+clamping, history recording and capping, search/filter across every container
+type, bay and shelf grouping and sorting, contents-color parsing and label
+contrast, label text fitting, CSV export, and recovery from corrupt saved data.

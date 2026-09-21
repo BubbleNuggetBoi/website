@@ -1,7 +1,14 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
+  CONTAINER_TYPES,
+  FILTERS,
   compareShelves,
+  inkOn,
+  labelLines,
+  labelTextSize,
+  normalizeColor,
+  rackSections,
   filterChemicals,
   groupByShelf,
   inventoryStats,
@@ -26,6 +33,12 @@ describe('default catalog', () => {
   it('has 18 gallons and 7 cans', () => {
     assert.equal(defaults.filter((c) => c.containerType === 'gallon').length, 18)
     assert.equal(defaults.filter((c) => c.containerType === 'can').length, 7)
+  })
+
+  it('seeds the contents color for the two products named after theirs', () => {
+    assert.equal(defaults.find((c) => c.productNumber === '138').color, '#1f7a3f')
+    assert.equal(defaults.find((c) => c.productNumber === '140').color, '#d4650f')
+    assert.equal(defaults.find((c) => c.productNumber === '202').color, '')
   })
 
   it('gives every product a unique id', () => {
@@ -81,6 +94,112 @@ describe('normalizeChemical', () => {
   it('rejects unknown container types', () => {
     assert.equal(normalizeChemical({ name: 'x', containerType: 'drum' }).containerType, 'gallon')
     assert.equal(normalizeChemical({ name: 'x', containerType: 'can' }).containerType, 'can')
+    assert.equal(normalizeChemical({ name: 'x', containerType: 'barrel' }).containerType, 'barrel')
+  })
+
+  it('supports all three container types', () => {
+    assert.deepEqual(CONTAINER_TYPES, ['gallon', 'can', 'barrel'])
+  })
+
+  it('keeps a valid contents color and drops junk', () => {
+    assert.equal(normalizeChemical({ name: 'x', color: '#D6417E' }).color, '#d6417e')
+    assert.equal(normalizeChemical({ name: 'x', color: 'pink' }).color, '')
+    assert.equal(normalizeChemical({ name: 'x' }).color, '')
+  })
+})
+
+describe('contents colors', () => {
+  it('normalizes shorthand and bare hex', () => {
+    assert.equal(normalizeColor('#f0a'), '#ff00aa')
+    assert.equal(normalizeColor('1f7a3f'), '#1f7a3f')
+    assert.equal(normalizeColor('  #1F7A3F '), '#1f7a3f')
+  })
+
+  it('rejects anything that is not a hex color', () => {
+    for (const bad of ['', null, undefined, 'rgb(1,2,3)', '#12345', 'zzzzzz']) {
+      assert.equal(normalizeColor(bad), '')
+    }
+  })
+
+  it('picks readable label ink for light and dark colors', () => {
+    assert.equal(inkOn('#e8edf1'), '#14181c')
+    assert.equal(inkOn('#2b3238'), '#ffffff')
+    assert.equal(inkOn('#d6417e'), '#ffffff')
+  })
+
+  it('uses the product color for its label, and a stable palette color without one', () => {
+    const colored = normalizeChemical({ id: 'a', name: 'Shampoo', color: '#d6417e' })
+    assert.equal(labelColorFor(colored).bg, '#d6417e')
+
+    const plain = normalizeChemical({ id: 'a', name: 'Shampoo' })
+    assert.deepEqual(labelColorFor(plain), labelColorFor({ ...plain, quantity: 9 }))
+  })
+})
+
+describe('container labels', () => {
+  it('wraps a name onto short all-caps lines', () => {
+    assert.deepEqual(labelLines('SERVPRO Green', 'gallon'), ['SERVPRO', 'GREEN'])
+    assert.deepEqual(labelLines('Coil Cleaner', 'can'), ['COIL', 'CLEANER'])
+  })
+
+  it('abbreviates rather than overflowing', () => {
+    const lines = labelLines('EXTREME Liquid Laundry Detergent', 'gallon')
+    assert.equal(lines.length, 2)
+    assert.ok(lines[1].endsWith('\u2026'))
+  })
+
+  it('handles an empty name', () => {
+    assert.deepEqual(labelLines('', 'gallon'), [])
+    assert.equal(labelTextSize([], '', 'gallon').nameSize, 0)
+  })
+
+  it('sizes text to fit the label box on every container type', () => {
+    for (const type of CONTAINER_TYPES) {
+      const lines = labelLines('Stainless Steel Cleaner', type)
+      const { nameSize, numberSize } = labelTextSize(lines, '490', type)
+      assert.ok(nameSize >= 4.4 && nameSize <= 9, `${type} name ${nameSize}`)
+      assert.ok(numberSize > 0 && numberSize <= 8.5, `${type} number ${numberSize}`)
+    }
+  })
+
+  it('leaves out the number line when a product has no number', () => {
+    assert.equal(labelTextSize(labelLines('Kilz Red', 'can'), '', 'can').numberSize, 0)
+  })
+})
+
+describe('rack bays', () => {
+  const chemicals = [
+    normalizeChemical({ id: 'a', name: 'Jug', containerType: 'gallon', shelf: '2', quantity: 3 }),
+    normalizeChemical({ id: 'b', name: 'Can', containerType: 'can', shelf: '1', quantity: 4 }),
+    normalizeChemical({ id: 'c', name: 'Jug 2', containerType: 'gallon', shelf: '1', quantity: 1 }),
+  ]
+
+  it('groups products into one bay per container type, in a fixed order', () => {
+    const sections = rackSections(chemicals)
+    assert.deepEqual(sections.map((s) => s.containerType), ['gallon', 'can'])
+    assert.equal(sections[0].chemicals.length, 2)
+    assert.equal(sections[0].total, 4)
+  })
+
+  it('gives each bay its own shelf levels', () => {
+    const [gallons] = rackSections(chemicals)
+    assert.deepEqual(gallons.shelves.map((level) => level.shelf), ['1', '2'])
+  })
+
+  it('hides empty bays unless asked to keep them', () => {
+    assert.equal(rackSections(chemicals).length, 2)
+    assert.equal(rackSections(chemicals, { includeEmpty: true }).length, 3)
+    assert.equal(rackSections([]).length, 0)
+  })
+
+  it('shows barrels as their own bay', () => {
+    const withBarrel = [
+      ...chemicals,
+      normalizeChemical({ id: 'd', name: 'Drum', containerType: 'barrel', quantity: 2 }),
+    ]
+    const barrels = rackSections(withBarrel).find((s) => s.containerType === 'barrel')
+    assert.equal(barrels.chemicals.length, 1)
+    assert.equal(barrels.total, 2)
   })
 })
 
@@ -136,6 +255,36 @@ describe('search and filters', () => {
     assert.deepEqual(filterChemicals(chemicals, { filter: 'can' }).map((c) => c.id), ['b', 'c'])
   })
 
+  it('filters by every container type, including barrels', () => {
+    const withBarrel = [
+      ...chemicals,
+      normalizeChemical({ id: 'd', name: 'Drum', containerType: 'barrel', quantity: 6 }),
+    ]
+    for (const type of CONTAINER_TYPES) {
+      const ids = filterChemicals(withBarrel, { filter: type }).map((c) => c.containerType)
+      assert.ok(ids.length > 0, `no matches for ${type}`)
+      assert.ok(
+        ids.every((containerType) => containerType === type),
+        `${type} filter leaked other types: ${ids.join(',')}`,
+      )
+    }
+  })
+
+  it('every filter button maps to a working filter', () => {
+    const withBarrel = [
+      ...chemicals,
+      normalizeChemical({ id: 'd', name: 'Drum', containerType: 'barrel', quantity: 6 }),
+    ]
+    for (const { id } of FILTERS) {
+      const matched = filterChemicals(withBarrel, { filter: id })
+      // 'all' is the only filter allowed to return everything
+      assert.ok(
+        id === 'all' ? matched.length === withBarrel.length : matched.length < withBarrel.length,
+        `filter ${id} matched ${matched.length} of ${withBarrel.length}`,
+      )
+    }
+  })
+
   it('filters low stock', () => {
     assert.deepEqual(filterChemicals(chemicals, { filter: 'low' }).map((c) => c.id), ['b'])
   })
@@ -168,12 +317,15 @@ describe('shelves', () => {
     assert.equal(levels[0].chemicals.length, 2)
   })
 
-  it('sorts gallons before cans within a shelf', () => {
+  it('orders a shelf by product number', () => {
     const chemicals = [
-      normalizeChemical({ name: 'can', containerType: 'can', shelf: '1', productNumber: '202' }),
-      normalizeChemical({ name: 'jug', containerType: 'gallon', shelf: '1', productNumber: '999' }),
+      normalizeChemical({ name: 'later', shelf: '1', productNumber: '408' }),
+      normalizeChemical({ name: 'earlier', shelf: '1', productNumber: '138' }),
     ]
-    assert.deepEqual(groupByShelf(chemicals)[0].chemicals.map((c) => c.name), ['jug', 'can'])
+    assert.deepEqual(groupByShelf(chemicals)[0].chemicals.map((c) => c.name), [
+      'earlier',
+      'later',
+    ])
   })
 
   it('offers used shelves plus the next free one', () => {
@@ -219,7 +371,13 @@ describe('stats, labels and export', () => {
     const lines = toCsv(chemicals).split('\r\n')
     assert.equal(lines.length, 4)
     assert.ok(lines[0].startsWith('Product Number,Name,Container Type'))
+    assert.ok(lines[0].includes('Color'))
     assert.ok(lines[1].includes(',A,gallon,10,'))
+  })
+
+  it('exports the contents color', () => {
+    const csv = toCsv([normalizeChemical({ name: 'Pink One', color: '#d6417e' })])
+    assert.ok(csv.includes('#d6417e'))
   })
 
   it('quotes CSV values containing commas', () => {

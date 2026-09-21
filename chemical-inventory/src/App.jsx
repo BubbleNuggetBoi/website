@@ -49,6 +49,7 @@ export default function App() {
       all: chemicals.length,
       gallon: chemicals.filter((chemical) => chemical.containerType === 'gallon').length,
       can: chemicals.filter((chemical) => chemical.containerType === 'can').length,
+      barrel: chemicals.filter((chemical) => chemical.containerType === 'barrel').length,
       low: chemicals.filter(isLowStock).length,
     }),
     [chemicals],
@@ -187,6 +188,9 @@ export default function App() {
             setSelectedId(id)
           }}
           emptyState={emptyState}
+          // Bays with nothing in them still show while browsing, so an empty
+          // barrel area is visibly ready to fill.
+          showEmptyBays={filter === 'all' && search.trim() === '' && chemicals.length > 0}
         />
 
         <p className="footnote">

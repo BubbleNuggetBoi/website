@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { toQuantity } from '../lib/inventory.js'
+import { CONTAINER_LABELS, toQuantity } from '../lib/inventory.js'
 
 /**
  * Big, glove-and-thumb friendly stock controls: -1 / +1 apply immediately,
@@ -41,7 +41,7 @@ export default function StockControls({ chemical, onAdjust, onSetQuantity }) {
         <div className="stock__readout">
           <span className="stock__value">{chemical.quantity}</span>
           <span className="stock__unit">
-            {chemical.containerType === 'can' ? 'cans' : 'gallons'} on hand
+            {CONTAINER_LABELS[chemical.containerType]?.unit ?? 'containers'} on hand
           </span>
         </div>
 

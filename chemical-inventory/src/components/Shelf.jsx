@@ -1,34 +1,30 @@
 import ChemicalContainer from './ChemicalContainer.jsx'
 
 /**
- * One physical shelf level. The slot grid wraps on narrow screens and each
- * wrapped row gets its own deck board, so the rack simply grows taller instead
- * of shrinking containers down to nothing.
+ * One shelf level. The slot row wraps on narrow screens and each wrapped row
+ * gets its own deck board, so the rack grows taller instead of shrinking
+ * containers below a tappable size. The `floor` variant drops the board and
+ * stands its containers on the warehouse floor, which is where barrels live.
  */
-export default function Shelf({ shelf, chemicals, onSelectChemical }) {
+export default function Shelf({ shelf, chemicals, onSelectChemical, variant = 'shelf' }) {
+  const onFloor = variant === 'floor'
+
   return (
-    <section className="shelf" aria-label={`Shelf ${shelf}`}>
+    <section className={`shelf shelf--${variant}`} aria-label={onFloor ? `Floor ${shelf}` : `Shelf ${shelf}`}>
       <div className="shelf__tag">
-        <span className="shelf__tag-word">Shelf</span>
+        <span className="shelf__tag-word">{onFloor ? 'Floor' : 'Shelf'}</span>
         <span className="shelf__tag-value">{shelf}</span>
       </div>
 
       <div className="shelf__bay">
-        {chemicals.length === 0 ? (
-          <div className="shelf__empty">
-            <span>Empty shelf</span>
-            <div className="deck deck--full" aria-hidden="true" />
-          </div>
-        ) : (
-          <div className="shelf__grid">
-            {chemicals.map((chemical) => (
-              <div className="slot" key={chemical.id}>
-                <ChemicalContainer chemical={chemical} onSelect={onSelectChemical} />
-                <div className="deck" aria-hidden="true" />
-              </div>
-            ))}
-          </div>
-        )}
+        <div className="shelf__grid">
+          {chemicals.map((chemical) => (
+            <div className="slot" key={chemical.id}>
+              <ChemicalContainer chemical={chemical} onSelect={onSelectChemical} />
+              <div className={onFloor ? 'deck deck--floor' : 'deck'} aria-hidden="true" />
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   )

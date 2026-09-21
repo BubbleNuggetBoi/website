@@ -1,7 +1,11 @@
 import { useState } from 'react'
-import { CONTAINER_TYPES, toQuantity } from '../lib/inventory.js'
-
-const CONTAINER_LABELS = { gallon: 'Gallon Jug', can: 'Can' }
+import {
+  CONTAINER_LABELS,
+  CONTAINER_TYPES,
+  PRODUCT_COLORS,
+  normalizeColor,
+  toQuantity,
+} from '../lib/inventory.js'
 
 function initialValues(chemical) {
   return {
@@ -11,6 +15,7 @@ function initialValues(chemical) {
     quantity: String(chemical?.quantity ?? 0),
     lowStockThreshold: String(chemical?.lowStockThreshold ?? 2),
     shelf: String(chemical?.shelf ?? '1'),
+    color: normalizeColor(chemical?.color),
   }
 }
 
@@ -47,6 +52,7 @@ export default function ChemicalForm({
       quantity: toQuantity(values.quantity, 0),
       lowStockThreshold: toQuantity(values.lowStockThreshold, 2),
       shelf: values.shelf.trim() || '1',
+      color: normalizeColor(values.color),
     })
   }
 
@@ -107,10 +113,50 @@ export default function ChemicalForm({
               aria-pressed={values.containerType === type}
               onClick={() => setValues((current) => ({ ...current, containerType: type }))}
             >
-              {CONTAINER_LABELS[type]}
+              {CONTAINER_LABELS[type].one}
             </button>
           ))}
         </div>
+      </fieldset>
+
+      <fieldset className="field field--fieldset">
+        <legend className="field__label">
+          Contents Color <span className="field__hint">tints the container and its label</span>
+        </legend>
+        <div className="swatches">
+          {PRODUCT_COLORS.map((preset) => {
+            const active = values.color === preset.value
+            return (
+              <button
+                key={preset.value || 'unset'}
+                type="button"
+                className={`swatch${active ? ' is-active' : ''}${
+                  preset.value ? '' : ' swatch--unset'
+                }`}
+                style={preset.value ? { '--swatch': preset.value } : undefined}
+                aria-pressed={active}
+                title={preset.name}
+                onClick={() => setValues((current) => ({ ...current, color: preset.value }))}
+              >
+                <span className="swatch__dot" aria-hidden="true" />
+                <span className="swatch__name">{preset.name}</span>
+              </button>
+            )
+          })}
+        </div>
+        <label className="swatch-custom">
+          <span className="swatch-custom__label">Custom</span>
+          <input
+            type="color"
+            className="swatch-custom__input"
+            value={values.color || '#8c98a4'}
+            onChange={(event) =>
+              setValues((current) => ({ ...current, color: normalizeColor(event.target.value) }))
+            }
+            aria-label="Pick a custom contents color"
+          />
+          <span className="swatch-custom__value">{values.color || 'not set'}</span>
+        </label>
       </fieldset>
 
       <div className="form__grid">

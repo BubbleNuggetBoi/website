@@ -4,14 +4,15 @@ import StockControls from './StockControls.jsx'
 import InventoryHistory from './InventoryHistory.jsx'
 import { ContainerIcon } from './ContainerArt.jsx'
 import {
+  CONTAINER_ART,
+  CONTAINER_LABELS,
+  contentsColorFor,
   formatTimestamp,
   historyForChemical,
   isLowStock,
   isOutOfStock,
   labelColorFor,
 } from '../lib/inventory.js'
-
-const DETAIL_TINTS = { gallon: '#dfe5ea', can: '#b4bec8' }
 
 /** Product window: current stock, quick adjustments, details and history. */
 export default function ChemicalModal({
@@ -27,6 +28,8 @@ export default function ChemicalModal({
   const low = isLowStock(chemical)
   const empty = isOutOfStock(chemical)
   const color = labelColorFor(chemical)
+  const contents = contentsColorFor(chemical)
+  const art = CONTAINER_ART[chemical.containerType] ?? CONTAINER_ART.gallon
 
   return (
     <Modal
@@ -36,16 +39,13 @@ export default function ChemicalModal({
     >
       <div className="detail">
         <div className="detail__hero" style={{ '--label-bg': color.bg }}>
-          <div className="detail__art">
-            <ContainerIcon
-              containerType={chemical.containerType}
-              tint={DETAIL_TINTS[chemical.containerType]}
-            />
+          <div className="detail__art" style={{ '--art-aspect': art.aspect }}>
+            <ContainerIcon containerType={chemical.containerType} contents={contents} />
           </div>
           <dl className="detail__facts">
             <div className="detail__fact">
               <dt>Container Type</dt>
-              <dd>{chemical.containerType === 'can' ? 'Can' : 'Gallon Jug'}</dd>
+              <dd>{CONTAINER_LABELS[chemical.containerType]?.one ?? 'Container'}</dd>
             </div>
             <div className="detail__fact">
               <dt>Shelf Location</dt>
@@ -65,6 +65,23 @@ export default function ChemicalModal({
             <div className="detail__fact">
               <dt>Low Stock Threshold</dt>
               <dd>{chemical.lowStockThreshold}</dd>
+            </div>
+            <div className="detail__fact">
+              <dt>Contents Color</dt>
+              <dd>
+                {contents ? (
+                  <>
+                    <span
+                      className="color-chip"
+                      style={{ '--swatch': contents }}
+                      aria-hidden="true"
+                    />
+                    {contents}
+                  </>
+                ) : (
+                  'Not set'
+                )}
+              </dd>
             </div>
             <div className="detail__fact">
               <dt>Last Updated</dt>

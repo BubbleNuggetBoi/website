@@ -461,8 +461,63 @@ code {
 
 /* ------------------------------------------------------------------- rack */
 
-.rack {
+/* Gallons take the full width; cans and barrels share the row beneath on wide
+   screens, the way the bays sit side by side in the warehouse. */
+.rack-yard {
+  display: grid;
+  gap: clamp(16px, 2.4vw, 26px);
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 1080px) {
+  .rack-yard {
+    grid-template-columns: 2fr 1fr;
+  }
+
+  .bay--gallon {
+    grid-column: 1 / -1;
+  }
+}
+
+.bay {
+  display: flex;
+  flex-direction: column;
+  align-self: start;
+  min-width: 0;
+}
+
+.bay__sign {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 0 4px 8px;
+}
+
+.bay__name {
+  font-size: clamp(1rem, 2.6vw, 1.2rem);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--text);
+}
+
+.bay__tally {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-faint);
+}
+
+.bay__tally-sep {
+  color: var(--line-strong);
+}
+
+.bay__frame {
   position: relative;
+  flex: 1;
   padding: 14px clamp(16px, 3vw, 30px) 0;
   border-radius: 18px;
   background:
@@ -475,6 +530,56 @@ code {
     #14191e;
   box-shadow: var(--shadow-lg), inset 0 1px 0 rgba(255, 255, 255, 0.05);
   overflow: hidden;
+}
+
+/* the barrel bay is a floor area, not shelving: concrete, not steel */
+.bay--barrel .bay__frame {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(0, 0, 0, 0.3)),
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.02) 0 3px,
+      transparent 3px 14px
+    ),
+    #15191d;
+}
+
+.bay--barrel .rack__upright {
+  display: none;
+}
+
+.bay__inner {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(14px, 2vw, 22px);
+}
+
+.bay__base {
+  height: 18px;
+  margin: 0 calc(clamp(16px, 3vw, 30px) * -1);
+  background: linear-gradient(180deg, var(--steel-1), var(--steel-3) 60%, #0d1114);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.5);
+}
+
+.bay--barrel .bay__base {
+  background: linear-gradient(180deg, #333b42, #14181c);
+}
+
+.bay__empty {
+  margin: 0;
+  padding: 34px 16px;
+  text-align: center;
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: var(--text-faint);
+}
+
+.bay__empty strong {
+  color: var(--text-dim);
+  white-space: nowrap;
 }
 
 /* steel uprights with bolt slots */
@@ -504,20 +609,11 @@ code {
   right: 0;
 }
 
-.rack__base {
-  height: 18px;
-  margin: 0 calc(clamp(16px, 3vw, 30px) * -1);
-  background: linear-gradient(180deg, var(--steel-1), var(--steel-3) 60%, #0d1114);
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.5);
-}
-
-.rack__inner {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  gap: clamp(14px, 2vw, 22px);
+.rack-yard--empty {
+  padding: 8px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(0, 0, 0, 0.25)), #14191e;
+  box-shadow: var(--shadow-lg);
 }
 
 .rack__empty {
@@ -611,6 +707,22 @@ code {
   border-radius: 3px;
 }
 
+.deck--floor {
+  height: 10px;
+  margin-top: 8px;
+  background: linear-gradient(180deg, #4a545d 0%, #2b3239 55%, #171b1f 100%);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+.shelf--floor .shelf__bay {
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.08));
+  box-shadow: inset 0 10px 20px rgba(0, 0, 0, 0.35);
+}
+
+.shelf--floor .shelf__tag {
+  background: linear-gradient(90deg, var(--steel-1), rgba(76, 86, 95, 0.12));
+}
+
 .shelf__empty {
   padding: 18px 10px 0;
   color: var(--text-faint);
@@ -649,10 +761,14 @@ code {
 }
 
 .container-card__art {
-  container: art / inline-size;
+  /* `size` (not `inline-size`) so label text can be sized off the art's
+     height, which is identical for every container type */
+  container: art / size;
   position: relative;
-  width: min(100%, 132px);
-  aspect-ratio: 100 / 132;
+  height: clamp(104px, 27vw, 148px);
+  aspect-ratio: var(--art-aspect, 0.575);
+  width: auto;
+  max-width: 100%;
   filter: drop-shadow(0 10px 10px rgba(0, 0, 0, 0.55));
 }
 
@@ -683,31 +799,23 @@ code {
   text-transform: uppercase;
 }
 
-.container-card__label--gallon {
-  left: 18%;
-  right: 20%;
-  top: 55%;
-  height: 33%;
-}
-
-.container-card__label--can {
-  left: 15%;
-  right: 15%;
-  top: 43%;
-  height: 40%;
-  border-radius: 2px / 6px;
+.container-card__label {
+  left: var(--label-left, 13%);
+  right: var(--label-right, 13%);
+  top: var(--label-top, 52%);
+  height: var(--label-height, 30%);
 }
 
 .container-card__label-number {
   font-size: 11px;
-  font-size: 13cqw;
+  font-size: var(--label-number-size, 8.5cqh);
   letter-spacing: 0.02em;
-  opacity: 0.92;
+  opacity: 0.94;
 }
 
 .container-card__label-name {
   font-size: 9px;
-  font-size: var(--label-name-size, 9.5cqw);
+  font-size: var(--label-name-size, 7cqh);
   letter-spacing: 0.01em;
   max-width: 100%;
   white-space: nowrap;
@@ -716,25 +824,21 @@ code {
 }
 
 /* drop the type pill in the tightest slots so the caption stays on one line */
-@container card (max-width: 132px) {
-  .pill--type {
-    display: none;
-  }
-}
+
 
 .qty-badge {
   position: absolute;
-  top: 2%;
-  right: -4%;
+  top: 1%;
+  right: -8%;
   min-width: 30px;
-  min-width: 26cqw;
+  min-width: 15cqh;
   padding: 3px 7px;
   border-radius: 999px;
   background: linear-gradient(180deg, var(--green-bright), var(--green));
   color: #fff;
   font-weight: 900;
   font-size: 0.82rem;
-  font-size: 17cqw;
+  font-size: 10cqh;
   line-height: 1.25;
   text-align: center;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), inset 0 0 0 1.5px rgba(255, 255, 255, 0.3);
@@ -973,9 +1077,10 @@ code {
 }
 
 .detail__art {
-  width: 84px;
+  height: 112px;
   flex: none;
-  aspect-ratio: 100 / 132;
+  aspect-ratio: var(--art-aspect, 0.575);
+  width: auto;
   filter: drop-shadow(0 10px 12px rgba(0, 0, 0, 0.5));
 }
 
@@ -1181,6 +1286,95 @@ code {
 .input::-webkit-outer-spin-button,
 .input::-webkit-inner-spin-button {
   height: 32px;
+}
+
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 8px;
+}
+
+.swatch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: left;
+}
+
+.swatch:hover {
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.swatch.is-active {
+  border-color: var(--green-bright);
+  box-shadow: 0 0 0 1px var(--green-bright), 0 4px 12px var(--green-glow);
+}
+
+.swatch__dot {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--swatch, transparent);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+}
+
+.swatch--unset .swatch__dot {
+  background: repeating-linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.18) 0 4px,
+    transparent 4px 8px
+  );
+}
+
+.swatch__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.swatch-custom {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-dim);
+}
+
+.swatch-custom__input {
+  width: 56px;
+  height: 40px;
+  padding: 2px;
+  border: 1px solid var(--line-strong);
+  border-radius: 9px;
+  background: rgba(8, 11, 14, 0.8);
+  cursor: pointer;
+}
+
+.swatch-custom__value {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--text-faint);
+}
+
+.color-chip {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-right: 7px;
+  border-radius: 4px;
+  vertical-align: -2px;
+  background: var(--swatch, transparent);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
 }
 
 .form__error {
@@ -1429,7 +1623,7 @@ code {
   }
 
   .detail__art {
-    width: 72px;
+    height: 96px;
     align-self: center;
   }
 
