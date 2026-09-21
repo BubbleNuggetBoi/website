@@ -18,6 +18,7 @@ import {
 export default function ChemicalModal({
   chemical,
   history,
+  canEdit,
   onClose,
   onAdjust,
   onSetQuantity,
@@ -90,7 +91,19 @@ export default function ChemicalModal({
           </dl>
         </div>
 
-        <StockControls chemical={chemical} onAdjust={onAdjust} onSetQuantity={onSetQuantity} />
+        {canEdit ? (
+          <StockControls chemical={chemical} onAdjust={onAdjust} onSetQuantity={onSetQuantity} />
+        ) : (
+          <div className="stock stock--readonly">
+            <span className="stock__value">{chemical.quantity}</span>
+            <span className="stock__unit">
+              {CONTAINER_LABELS[chemical.containerType]?.unit ?? 'containers'} on hand
+            </span>
+            <p className="stock__note">
+              This is a view-only copy. Ask whoever manages the inventory to update the count.
+            </p>
+          </div>
+        )}
 
         <div className="detail__actions">
           <button
@@ -101,9 +114,11 @@ export default function ChemicalModal({
           >
             {showHistory ? 'Hide History' : 'View History'}
           </button>
-          <button type="button" className="btn btn--accent btn--lg" onClick={onEdit}>
-            Edit Product
-          </button>
+          {canEdit ? (
+            <button type="button" className="btn btn--accent btn--lg" onClick={onEdit}>
+              Edit Product
+            </button>
+          ) : null}
         </div>
 
         {showHistory ? (

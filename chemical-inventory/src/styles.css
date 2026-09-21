@@ -1106,6 +1106,60 @@ code {
   font-weight: 700;
 }
 
+/* view-only badge and save indicator */
+.ribbon {
+  align-self: center;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 138, 43, 0.5);
+  background: rgba(255, 138, 43, 0.14);
+  color: var(--orange-bright);
+  font-size: 0.66rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  white-space: nowrap;
+}
+
+.sync {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+
+.sync::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.sync--saving {
+  color: var(--text-dim);
+}
+
+.sync--saved {
+  border-color: rgba(41, 163, 83, 0.4);
+  color: #8fe0aa;
+}
+
+.sync--error {
+  border-color: rgba(242, 177, 52, 0.5);
+  background: rgba(242, 177, 52, 0.12);
+  color: var(--warn);
+}
+
 /* ---------------------------------------------------------- stock controls */
 
 .stock {
@@ -1119,6 +1173,17 @@ code {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.stock--readonly {
+  text-align: center;
+}
+
+.stock__note {
+  margin: 12px 0 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--text-faint);
 }
 
 .stepper {

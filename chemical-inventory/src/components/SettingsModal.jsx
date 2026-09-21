@@ -5,6 +5,8 @@ import { STORAGE_KEY } from '../lib/storage.js'
 /** Export + reset. Deliberately small: the rack is the app, not this screen. */
 export default function SettingsModal({
   stats,
+  canEdit,
+  isShared,
   onClose,
   onExportJson,
   onExportCsv,
@@ -49,13 +51,21 @@ export default function SettingsModal({
 
         <section className="settings__block">
           <h3 className="section-title">Storage</h3>
-          <p className="settings__note">
-            Inventory is saved in this browser under <code>{STORAGE_KEY}</code>. It survives
-            refreshes and restarts on this device. Export a backup before clearing browser data,
-            or before wiring this app up to a shared database.
-          </p>
+          {isShared ? (
+            <p className="settings__note">
+              {canEdit
+                ? 'Counts are published into this page, so everyone with the link sees the numbers you save. A copy is also kept in this browser so the app keeps working if a save does not go through.'
+                : 'You are looking at a shared copy. The counts were published by whoever manages this inventory.'}
+            </p>
+          ) : (
+            <p className="settings__note">
+              Inventory is saved in this browser under <code>{STORAGE_KEY}</code>. It survives
+              refreshes and restarts on this device. Export a backup before clearing browser data.
+            </p>
+          )}
         </section>
 
+        {canEdit ? (
         <section className="settings__block settings__block--danger">
           <h3 className="section-title">Reset To Default Products</h3>
           <p className="settings__note">
@@ -66,6 +76,7 @@ export default function SettingsModal({
             Reset To Default Products
           </button>
         </section>
+        ) : null}
       </div>
     </Modal>
   )

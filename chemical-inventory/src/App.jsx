@@ -26,7 +26,7 @@ function fileStamp(date = new Date()) {
 
 export default function App() {
   const inventory = useInventory()
-  const { chemicals, history } = inventory
+  const { chemicals, history, canEdit, isShared, status } = inventory
 
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('all')
@@ -147,6 +147,9 @@ export default function App() {
 
       <Header
         stats={stats}
+        canEdit={canEdit}
+        isShared={isShared}
+        status={status}
         onAddChemical={() => {
           setSelectedId(null)
           setView('add')
@@ -194,7 +197,11 @@ export default function App() {
         />
 
         <p className="footnote">
-          Tap a container to count it in or out. Every change saves to this device automatically.
+          {canEdit
+            ? isShared
+              ? 'Tap a container to count it in or out. Changes save to the shared copy everyone with the link sees.'
+              : 'Tap a container to count it in or out. Every change saves to this device automatically.'
+            : 'Tap a container to see its details. Counts are kept by whoever manages this inventory.'}
         </p>
       </main>
 
@@ -202,6 +209,7 @@ export default function App() {
         <ChemicalModal
           chemical={selected}
           history={history}
+          canEdit={canEdit}
           onClose={closeAll}
           onAdjust={(delta) => inventory.adjustQuantity(selected.id, delta)}
           onSetQuantity={(quantity) => inventory.setQuantity(selected.id, quantity)}
@@ -209,11 +217,11 @@ export default function App() {
         />
       ) : null}
 
-      {view === 'add' ? (
+      {view === 'add' && canEdit ? (
         <AddChemicalModal shelves={shelves} onClose={() => setView(null)} onSubmit={handleAdd} />
       ) : null}
 
-      {editing ? (
+      {editing && canEdit ? (
         <EditChemicalModal
           chemical={selected}
           shelves={shelves}
@@ -226,6 +234,7 @@ export default function App() {
       {view === 'history' ? (
         <HistoryModal
           history={history}
+          canEdit={canEdit}
           onClose={() => setView(null)}
           onClearHistory={() => setConfirm({ kind: 'clearHistory' })}
         />
@@ -234,6 +243,8 @@ export default function App() {
       {view === 'settings' ? (
         <SettingsModal
           stats={stats}
+          canEdit={canEdit}
+          isShared={isShared}
           onClose={() => setView(null)}
           onExportCsv={() =>
             downloadFile(`chemical-inventory-${fileStamp()}.csv`, toCsv(chemicals), 'text/csv')

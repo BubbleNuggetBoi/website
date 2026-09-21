@@ -40,6 +40,32 @@ npm test         # unit tests for the inventory logic (node:test)
 - All state is saved to `localStorage` on every change and restored on load.
   Settings can export CSV/JSON, or reset back to the default product list.
 
+## Sharing one inventory from one link
+
+On a host that lets a page save new versions of itself, the app publishes the
+counts *into* the page. Whoever can edit the page counts stock; everyone else
+opens the same link and sees those counts, with no account and no database:
+
+- `lib/sharedCopy.js` rebuilds the whole document from its own stylesheet and
+  script (found by the `app-css` / `app-js` ids) plus a fresh
+  `<script id="inventory-state" type="application/json">` block, then hands it
+  to the host. Only the embedded data differs between versions, so the page can
+  republish itself indefinitely without growing.
+- On load, the embedded counts win over this device's `localStorage` copy, so a
+  viewer with stale local data still sees the shared numbers.
+- Saves are batched (2.5s after the last change), so counting a shelf is one
+  save rather than one per tap. The toolbar shows saving / saved / not saved.
+- A page carrying the state block is **read-only until the host confirms the
+  visitor can edit** — a signed-out visitor is never shown controls that would
+  only write to their own browser. Readers keep search, filters, history and
+  export; they lose the steppers, Add, Edit, Delete and Reset.
+- With no such host (local dev, or your own web host) none of this engages and
+  the app behaves exactly as it always has, on `localStorage`.
+
+Note that a shared *database* is a different trade-off: it gives every viewer
+live read/write, but requires each of them to be a signed-in member of the
+owner's organization, and such a page cannot be shared by public link.
+
 ## Project layout
 
 ```
@@ -50,6 +76,8 @@ src/
                              label text fitting, formatting, CSV/JSON export
   lib/inventoryReducer.js    pure state machine for every mutation + history
   lib/storage.js             localStorage read/write, defensive parsing, downloads
+  lib/sharedCopy.js          publishing the counts into the page others open,
+                             and deciding whether this visit may save at all
   hooks/useInventory.js      binds the reducer to storage; the only bridge
                              between data and UI
   components/
@@ -125,7 +153,9 @@ bay for it, the forms offer it, and the filter works — `src/test` asserts that
 every entry in `FILTERS` actually narrows the list, so a half-wired type fails
 the suite.
 
-`npm test` covers the logic layer (70 tests): seeding, quantity math and
+`npm test` covers the logic layer (80 tests): seeding, quantity math and
 clamping, history recording and capping, search/filter across every container
 type, bay and shelf grouping and sorting, contents-color parsing and label
-contrast, label text fitting, CSV export, and recovery from corrupt saved data.
+contrast, label text fitting, CSV export, recovery from corrupt saved data, and
+the shared-copy serializer (round trips, `<` escaping, and rebuilding a page
+that can rebuild itself again).

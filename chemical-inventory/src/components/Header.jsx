@@ -1,5 +1,19 @@
+const STATUS_TEXT = {
+  saving: 'Saving\u2026',
+  saved: 'Shared copy saved',
+  error: 'Not saved to the shared copy',
+}
+
 /** Top toolbar: identity, at-a-glance counts and the primary actions. */
-export default function Header({ stats, onAddChemical, onOpenHistory, onOpenSettings }) {
+export default function Header({
+  stats,
+  canEdit,
+  isShared,
+  status,
+  onAddChemical,
+  onOpenHistory,
+  onOpenSettings,
+}) {
   return (
     <header className="topbar">
       <div className="topbar__brand">
@@ -8,8 +22,16 @@ export default function Header({ stats, onAddChemical, onOpenHistory, onOpenSett
         </div>
         <div className="topbar__titles">
           <h1 className="topbar__title">Chemical Inventory</h1>
-          <p className="topbar__sub">Warehouse Rack &middot; Live Count</p>
+          <p className="topbar__sub">
+            {canEdit ? 'Warehouse Rack \u00b7 Live Count' : 'Warehouse Rack \u00b7 View Only'}
+          </p>
         </div>
+        {!canEdit ? <span className="ribbon">View Only</span> : null}
+        {canEdit && isShared && status !== 'idle' ? (
+          <span className={`sync sync--${status}`} role="status">
+            {STATUS_TEXT[status]}
+          </span>
+        ) : null}
       </div>
 
       <div className="topbar__stats" role="group" aria-label="Inventory summary">
@@ -59,12 +81,14 @@ export default function Header({ stats, onAddChemical, onOpenHistory, onOpenSett
           </svg>
           <span className="btn__text">Settings</span>
         </button>
-        <button type="button" className="btn btn--primary btn--add" onClick={onAddChemical}>
-          <span aria-hidden="true" className="btn__plus">
-            +
-          </span>
-          Add Chemical
-        </button>
+        {canEdit ? (
+          <button type="button" className="btn btn--primary btn--add" onClick={onAddChemical}>
+            <span aria-hidden="true" className="btn__plus">
+              +
+            </span>
+            Add Chemical
+          </button>
+        ) : null}
       </div>
     </header>
   )
