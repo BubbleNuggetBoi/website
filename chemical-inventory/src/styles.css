@@ -1356,6 +1356,13 @@ code {
   flex-wrap: wrap;
 }
 
+.settings__notice {
+  margin: 12px 0 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--warn);
+}
+
 .confirm__message {
   margin: 0 0 18px;
   font-size: 1rem;

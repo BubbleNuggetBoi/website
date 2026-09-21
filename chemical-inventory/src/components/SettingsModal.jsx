@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import Modal from './Modal.jsx'
 import { STORAGE_KEY } from '../lib/storage.js'
 
@@ -9,6 +10,15 @@ export default function SettingsModal({
   onExportCsv,
   onRequestReset,
 }) {
+  const [notice, setNotice] = useState('')
+
+  // Exports go through the host on sandboxed pages, where a viewer can decline.
+  const runExport = (exporter) => async () => {
+    setNotice('')
+    const saved = await exporter()
+    if (!saved) setNotice('Export was cancelled, or saving files is not allowed on this device.')
+  }
+
   return (
     <Modal title="Settings" subtitle="Backups and catalog maintenance" onClose={onClose}>
       <div className="settings">
@@ -19,13 +29,22 @@ export default function SettingsModal({
             change history in the JSON file.
           </p>
           <div className="settings__row">
-            <button type="button" className="btn btn--accent btn--lg" onClick={onExportCsv}>
+            <button
+              type="button"
+              className="btn btn--accent btn--lg"
+              onClick={runExport(onExportCsv)}
+            >
               Export CSV
             </button>
-            <button type="button" className="btn btn--ghost btn--lg" onClick={onExportJson}>
+            <button
+              type="button"
+              className="btn btn--ghost btn--lg"
+              onClick={runExport(onExportJson)}
+            >
               Export JSON
             </button>
           </div>
+          {notice ? <p className="settings__notice">{notice}</p> : null}
         </section>
 
         <section className="settings__block">

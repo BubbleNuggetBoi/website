@@ -87,9 +87,27 @@ export function clearState() {
   }
 }
 
-/** Triggers a browser download; used by the Settings export actions. */
-export function downloadFile(filename, contents, mimeType) {
-  if (typeof document === 'undefined') return
+/**
+ * Hosts that sandbox the page (a published claude.ai artifact, for one) block
+ * downloads the page starts itself and offer a save capability instead. Ask for
+ * it when it exists, otherwise fall back to a plain link.
+ */
+async function hostSave(filename, contents) {
+  const use = typeof window !== 'undefined' ? window.claude?.use : undefined
+  if (typeof use !== 'function') return null
+  try {
+    const downloads = await use('downloads')
+    if (!downloads) return null
+    await downloads.save({ filename, data: contents })
+    return true
+  } catch {
+    // Viewer declined, or the save is unavailable here.
+    return false
+  }
+}
+
+function linkSave(filename, contents, mimeType) {
+  if (typeof document === 'undefined') return false
   const blob = new Blob([contents], { type: `${mimeType};charset=utf-8` })
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
@@ -100,4 +118,15 @@ export function downloadFile(filename, contents, mimeType) {
   link.remove()
   // Give Safari a beat to start the download before revoking.
   setTimeout(() => URL.revokeObjectURL(url), 1000)
+  return true
+}
+
+/**
+ * Offers a generated file to the user. Resolves true when the file was handed
+ * over, false when it was declined or no save route exists.
+ */
+export async function downloadFile(filename, contents, mimeType) {
+  const hosted = await hostSave(filename, contents)
+  if (hosted !== null) return hosted
+  return linkSave(filename, contents, mimeType)
 }

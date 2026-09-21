@@ -234,6 +234,7 @@ export default function App() {
           onExportCsv={() =>
             downloadFile(`chemical-inventory-${fileStamp()}.csv`, toCsv(chemicals), 'text/csv')
           }
+
           onExportJson={() =>
             downloadFile(
               `chemical-inventory-${fileStamp()}.json`,
