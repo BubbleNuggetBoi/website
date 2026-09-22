@@ -1,9 +1,12 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
+  AREA_IDS,
+  CONTAINER_ART,
   CONTAINER_TYPES,
-  FILTERS,
+  bayTypesFor,
   compareShelves,
+  filtersFor,
   inkOn,
   labelLines,
   labelTextSize,
@@ -25,8 +28,8 @@ import { createDefaultChemicals } from '../data/defaultChemicals.js'
 describe('default catalog', () => {
   const defaults = createDefaultChemicals()
 
-  it('preloads all 25 seed products at zero quantity', () => {
-    assert.equal(defaults.length, 25)
+  it('preloads every seed product at zero quantity', () => {
+    assert.equal(defaults.length, 34)
     assert.ok(defaults.every((chemical) => chemical.quantity === 0))
   })
 
@@ -43,6 +46,26 @@ describe('default catalog', () => {
 
   it('gives every product a unique id', () => {
     assert.equal(new Set(defaults.map((c) => c.id)).size, defaults.length)
+  })
+
+  it('seeds a complete record for every product', () => {
+    // A seed missing a field the app expects (an area, a threshold) renders a
+    // blank rack on a first visit, so check against a normalized record.
+    const expected = Object.keys(normalizeChemical({ name: 'x' })).sort()
+    for (const chemical of defaults) {
+      assert.deepEqual(Object.keys(chemical).sort(), expected, `incomplete: ${chemical.name}`)
+    }
+  })
+
+  it('files every seed product in a real area', () => {
+    for (const chemical of defaults) {
+      assert.ok(AREA_IDS.includes(chemical.area), `${chemical.name} -> ${chemical.area}`)
+    }
+  })
+
+  it('stocks both the chemical rack and the supply cabinet', () => {
+    assert.equal(defaults.filter((c) => c.area === 'chemicals').length, 25)
+    assert.ok(defaults.filter((c) => c.area === 'cabinet').length >= 8)
   })
 
   it('leaves the Kilz products without product numbers', () => {
@@ -97,8 +120,22 @@ describe('normalizeChemical', () => {
     assert.equal(normalizeChemical({ name: 'x', containerType: 'barrel' }).containerType, 'barrel')
   })
 
-  it('supports all three container types', () => {
-    assert.deepEqual(CONTAINER_TYPES, ['gallon', 'can', 'barrel'])
+  it('supports every container type the rack can draw', () => {
+    assert.deepEqual(CONTAINER_TYPES, [
+      'gallon',
+      'can',
+      'barrel',
+      'gloveBox',
+      'longBox',
+      'suit',
+      'mop',
+    ])
+  })
+
+  it('files a product in an area, defaulting to the chemical rack', () => {
+    assert.equal(normalizeChemical({ name: 'x' }).area, 'chemicals')
+    assert.equal(normalizeChemical({ name: 'x', area: 'cabinet' }).area, 'cabinet')
+    assert.equal(normalizeChemical({ name: 'x', area: 'garage' }).area, 'chemicals')
   })
 
   it('keeps a valid contents color and drops junk', () => {
@@ -157,8 +194,24 @@ describe('container labels', () => {
     for (const type of CONTAINER_TYPES) {
       const lines = labelLines('Stainless Steel Cleaner', type)
       const { nameSize, numberSize } = labelTextSize(lines, '490', type)
-      assert.ok(nameSize >= 4.4 && nameSize <= 9, `${type} name ${nameSize}`)
-      assert.ok(numberSize > 0 && numberSize <= 8.5, `${type} number ${numberSize}`)
+      const { label } = CONTAINER_ART[type]
+      // Both lines plus the number have to fit inside the label box.
+      const stack = numberSize * 1.15 + nameSize * 1.15 * lines.length
+      assert.ok(nameSize >= 4.4, `${type} name too small: ${nameSize}`)
+      assert.ok(numberSize > 0, `${type} has no number line`)
+      assert.ok(stack <= label.height, `${type} overflows its label: ${stack} > ${label.height}`)
+    }
+  })
+
+  it('never lets a line overrun the label width', () => {
+    for (const type of CONTAINER_TYPES) {
+      const { label, aspect } = CONTAINER_ART[type]
+      const available = (100 - label.left - label.right) * aspect
+      const lines = labelLines('Bright-N-Neutral Cleaner', type)
+      const { nameSize } = labelTextSize(lines, '408', type)
+      const longest = Math.max(...lines.map((line) => line.length))
+      // 0.724em per character, measured in the browser
+      assert.ok(longest * 0.724 * nameSize < available, `${type} line too wide`)
     }
   })
 
@@ -187,9 +240,35 @@ describe('rack bays', () => {
   })
 
   it('hides empty bays unless asked to keep them', () => {
-    assert.equal(rackSections(chemicals).length, 2)
-    assert.equal(rackSections(chemicals, { includeEmpty: true }).length, 3)
-    assert.equal(rackSections([]).length, 0)
+    const types = ['gallon', 'can', 'barrel']
+    assert.equal(rackSections(chemicals, { types }).length, 2)
+    assert.equal(rackSections(chemicals, { types, includeEmpty: true }).length, 3)
+    assert.equal(rackSections([], { types }).length, 0)
+  })
+
+  it('always draws a bay for every type present, so nothing falls off the rack', () => {
+    const mixed = [
+      normalizeChemical({ name: 'Jug', containerType: 'gallon' }),
+      normalizeChemical({ name: 'Gloves', containerType: 'gloveBox' }),
+      normalizeChemical({ name: 'Mop', containerType: 'mop' }),
+    ]
+    const types = bayTypesFor(mixed)
+    assert.deepEqual(types, ['gallon', 'gloveBox', 'mop'])
+
+    const drawn = rackSections(mixed, { types }).flatMap((section) => section.chemicals)
+    assert.equal(drawn.length, mixed.length, 'every product must land in a bay')
+  })
+
+  it('keeps the standing chemical bays while browsing', () => {
+    const types = bayTypesFor([normalizeChemical({ name: 'Mop', containerType: 'mop' })], {
+      includeEmpty: true,
+    })
+    assert.deepEqual(types, ['gallon', 'can', 'barrel', 'mop'])
+  })
+
+  it('draws bays only for the types it is given', () => {
+    const sections = rackSections(chemicals, { types: ['can'] })
+    assert.deepEqual(sections.map((s) => s.containerType), ['can'])
   })
 
   it('shows barrels as their own bay', () => {
@@ -255,34 +334,54 @@ describe('search and filters', () => {
     assert.deepEqual(filterChemicals(chemicals, { filter: 'can' }).map((c) => c.id), ['b', 'c'])
   })
 
-  it('filters by every container type, including barrels', () => {
-    const withBarrel = [
-      ...chemicals,
-      normalizeChemical({ id: 'd', name: 'Drum', containerType: 'barrel', quantity: 6 }),
-    ]
+  it('filters by container type, for every type there is', () => {
+    // one of each type, so a newly added type is covered automatically
+    const stock = CONTAINER_TYPES.map((containerType, index) =>
+      normalizeChemical({ id: `t${index}`, name: containerType, containerType, quantity: 4 }),
+    )
     for (const type of CONTAINER_TYPES) {
-      const ids = filterChemicals(withBarrel, { filter: type }).map((c) => c.containerType)
-      assert.ok(ids.length > 0, `no matches for ${type}`)
-      assert.ok(
-        ids.every((containerType) => containerType === type),
-        `${type} filter leaked other types: ${ids.join(',')}`,
-      )
+      const matched = filterChemicals(stock, { filter: type })
+      assert.equal(matched.length, 1, `${type} matched ${matched.length}`)
+      assert.equal(matched[0].containerType, type)
     }
   })
 
-  it('every filter button maps to a working filter', () => {
-    const withBarrel = [
-      ...chemicals,
-      normalizeChemical({ id: 'd', name: 'Drum', containerType: 'barrel', quantity: 6 }),
+  it('every filter chip offered for an area maps to a working filter', () => {
+    const stock = [
+      ...chemicals.map((c) => normalizeChemical({ ...c, area: 'chemicals' })),
+      normalizeChemical({ id: 'd', name: 'Drum', containerType: 'barrel', area: 'chemicals' }),
+      // two types in the cabinet, one well stocked and one not, so both a type
+      // chip and the low-stock chip are observably narrowing
+      normalizeChemical({
+        id: 'e',
+        name: 'Gloves',
+        containerType: 'gloveBox',
+        area: 'cabinet',
+        quantity: 9,
+      }),
+      normalizeChemical({ id: 'f', name: 'Suit', containerType: 'suit', area: 'cabinet' }),
     ]
-    for (const { id } of FILTERS) {
-      const matched = filterChemicals(withBarrel, { filter: id })
-      // 'all' is the only filter allowed to return everything
-      assert.ok(
-        id === 'all' ? matched.length === withBarrel.length : matched.length < withBarrel.length,
-        `filter ${id} matched ${matched.length} of ${withBarrel.length}`,
-      )
+    for (const areaId of AREA_IDS) {
+      const scoped = stock.filter((c) => c.area === areaId)
+      for (const { id } of filtersFor(stock, areaId)) {
+        const matched = filterChemicals(scoped, { filter: id })
+        // 'all' is the only chip allowed to return everything in the area
+        assert.ok(
+          id === 'all' ? matched.length === scoped.length : matched.length < scoped.length,
+          `${areaId}/${id} matched ${matched.length} of ${scoped.length}`,
+        )
+        assert.ok(matched.length > 0, `${areaId}/${id} matched nothing`)
+      }
     }
+  })
+
+  it('only offers filter chips for types the area actually stocks', () => {
+    const stock = [
+      normalizeChemical({ name: 'Jug', containerType: 'gallon', area: 'chemicals' }),
+      normalizeChemical({ name: 'Gloves', containerType: 'gloveBox', area: 'cabinet' }),
+    ]
+    assert.deepEqual(filtersFor(stock, 'chemicals').map((f) => f.id), ['all', 'gallon', 'low'])
+    assert.deepEqual(filtersFor(stock, 'cabinet').map((f) => f.id), ['all', 'gloveBox', 'low'])
   })
 
   it('filters low stock', () => {

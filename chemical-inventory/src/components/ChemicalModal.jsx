@@ -6,6 +6,7 @@ import { ContainerIcon } from './ContainerArt.jsx'
 import {
   CONTAINER_ART,
   CONTAINER_LABELS,
+  areaById,
   contentsColorFor,
   formatTimestamp,
   historyForChemical,
@@ -50,7 +51,9 @@ export default function ChemicalModal({
             </div>
             <div className="detail__fact">
               <dt>Shelf Location</dt>
-              <dd>Shelf {chemical.shelf}</dd>
+              <dd>
+                {areaById(chemical.area).label} &middot; {chemical.shelf}
+              </dd>
             </div>
             <div className="detail__fact">
               <dt>Current Quantity</dt>

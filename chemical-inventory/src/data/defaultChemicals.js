@@ -1,6 +1,7 @@
 /**
- * Seed catalog for the warehouse. Quantities intentionally start at 0 so the
- * warehouse team can enter real counts from the floor.
+ * Seed catalog for the warehouse: the chemical rack, plus a starting list for
+ * the supply cabinet. Quantities intentionally start at 0 so the warehouse
+ * team can enter real counts from the floor.
  *
  * This list is only a starting point: products are stored in localStorage after
  * first load, and any number of new chemicals can be added at runtime.
@@ -26,6 +27,24 @@ const GALLONS = [
   ['408', 'Bright-N-Neutral Cleaner'],
   ['431', 'BotaniPRO Hard Surface Cleaner'],
   ['433', 'BotaniPRO Floor Cleaner'],
+]
+
+/**
+ * A starting point for the supply cabinet, read off the labels in the cabinet
+ * itself. Every one is renameable and deletable — correct these to match what
+ * is really on each shelf.
+ * [name, containerType, shelf, color?]
+ */
+const CABINET = [
+  ['Ear Plugs', 'longBox', 'Masks & Plugs'],
+  ['N95 Masks', 'longBox', 'Masks & Plugs'],
+  ['Gloves - Medium', 'gloveBox', 'Gloves', '#2f6f9f'],
+  ['Gloves - Large', 'gloveBox', 'Gloves', '#2f6f9f'],
+  ['Gloves - XL', 'gloveBox', 'Gloves', '#2f6f9f'],
+  ['Tyvek Suit - Medium', 'suit', 'Tyvek'],
+  ['Tyvek Suit - Large', 'suit', 'Tyvek'],
+  ['Tyvek Suit - XL', 'suit', 'Tyvek'],
+  ['Floor Mop Head', 'mop', 'Floor Care'],
 ]
 
 const CANS = [
@@ -62,7 +81,16 @@ export function createDefaultChemicals(now = new Date().toISOString()) {
     shelf: '1',
   }))
 
-  return [...gallons, ...cans].map((product, index) => ({
+  const cabinet = CABINET.map(([name, containerType, shelf, color]) => ({
+    productNumber: '',
+    name,
+    color: color ?? '',
+    containerType,
+    shelf,
+    area: 'cabinet',
+  }))
+
+  return [...gallons, ...cans, ...cabinet].map((product, index) => ({
     id: `seed-${index + 1}`,
     productNumber: product.productNumber,
     name: product.name,
@@ -70,6 +98,7 @@ export function createDefaultChemicals(now = new Date().toISOString()) {
     quantity: 0,
     lowStockThreshold: 2,
     shelf: product.shelf,
+    area: product.area ?? 'chemicals',
     color: product.color,
     createdAt: now,
     updatedAt: now,

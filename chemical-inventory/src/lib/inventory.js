@@ -3,22 +3,66 @@
  * so it can be unit tested in plain Node and later reused by a real backend.
  */
 
-export const CONTAINER_TYPES = ['gallon', 'can', 'barrel']
+export const CONTAINER_TYPES = [
+  'gallon',
+  'can',
+  'barrel',
+  'gloveBox',
+  'longBox',
+  'suit',
+  'mop',
+]
 
 /** Labels used on forms, filters and the bay signs over each rack. */
 export const CONTAINER_LABELS = {
   gallon: { one: 'Gallon Jug', many: 'Gallons', unit: 'gallons' },
   can: { one: 'Can', many: 'Cans', unit: 'cans' },
   barrel: { one: 'Barrel', many: 'Barrels', unit: 'barrels' },
+  gloveBox: { one: 'Glove Box', many: 'Glove Boxes', unit: 'boxes' },
+  longBox: { one: 'Long Box', many: 'Boxes', unit: 'boxes' },
+  suit: { one: 'Suit', many: 'Suits', unit: 'suits' },
+  mop: { one: 'Mop Head', many: 'Mop Heads', unit: 'mop heads' },
 }
 
-export const FILTERS = [
-  { id: 'all', label: 'All' },
-  { id: 'gallon', label: 'Gallons' },
-  { id: 'can', label: 'Cans' },
-  { id: 'barrel', label: 'Barrels' },
-  { id: 'low', label: 'Low Stock' },
+/**
+ * Areas are the tabs across the top: each one draws its own rack from the
+ * products standing in it. `bays` groups a rack into one bay per container
+ * type (the chemical rack); `shelves` is a single cabinet whose shelves hold
+ * whatever mix of items sits on them, the way the supply cabinet really works.
+ */
+export const AREAS = [
+  { id: 'chemicals', label: 'Chemicals', layout: 'bays', shelfWord: 'Shelf' },
+  { id: 'cabinet', label: 'Cabinet', layout: 'shelves', shelfWord: 'Shelf' },
 ]
+
+export const AREA_IDS = AREAS.map((area) => area.id)
+
+export function areaById(id) {
+  return AREAS.find((area) => area.id === id) ?? AREAS[0]
+}
+
+export function normalizeArea(value) {
+  return AREA_IDS.includes(value) ? value : AREA_IDS[0]
+}
+
+/**
+ * Filter chips for one area: All, a chip per container type actually stocked
+ * there, then Low Stock. Adding a container type therefore adds its filter
+ * without touching this list.
+ */
+export function filtersFor(chemicals, area) {
+  const present = new Set(
+    chemicals.filter((chemical) => chemical.area === area).map((c) => c.containerType),
+  )
+  return [
+    { id: 'all', label: 'All' },
+    ...CONTAINER_TYPES.filter((type) => present.has(type)).map((type) => ({
+      id: type,
+      label: CONTAINER_LABELS[type].many,
+    })),
+    { id: 'low', label: 'Low Stock' },
+  ]
+}
 
 /**
  * Drawing geometry per container type, shared by the SVG art and the label
@@ -31,20 +75,38 @@ export const CONTAINER_ART = {
   gallon: {
     aspect: 0.575,
     label: { left: 13, right: 13, top: 52, height: 30 },
-    maxLines: 2,
     maxChars: 9,
   },
   can: {
     aspect: 0.4,
     label: { left: 6, right: 6, top: 39, height: 36 },
-    maxLines: 2,
     maxChars: 8,
   },
   barrel: {
     aspect: 0.66,
     label: { left: 12, right: 12, top: 33, height: 34 },
-    maxLines: 2,
     maxChars: 10,
+  },
+  // label boxes sit on each drawing's front face
+  gloveBox: {
+    aspect: 1.05,
+    label: { left: 11, right: 34, top: 55, height: 26 },
+    maxChars: 11,
+  },
+  longBox: {
+    aspect: 1.7,
+    label: { left: 8, right: 26, top: 60, height: 24 },
+    maxChars: 13,
+  },
+  suit: {
+    aspect: 0.96,
+    label: { left: 26, right: 26, top: 54, height: 22 },
+    maxChars: 10,
+  },
+  mop: {
+    aspect: 0.8,
+    label: { left: 21, right: 21, top: 48, height: 20 },
+    maxChars: 9,
   },
 }
 
@@ -169,6 +231,7 @@ export function normalizeChemical(input = {}, now = new Date().toISOString()) {
     quantity: toQuantity(input.quantity, 0),
     lowStockThreshold: toQuantity(input.lowStockThreshold, 2),
     shelf: String(input.shelf ?? '').trim() || '1',
+    area: normalizeArea(input.area),
     color: normalizeColor(input.color),
     createdAt: input.createdAt || now,
     updatedAt: input.updatedAt || now,
@@ -261,8 +324,11 @@ export function labelTextSize(lines, productNumber, containerType = 'gallon') {
   const fits = (chars, max) =>
     Math.min(max, chars > 0 ? widthAvailable / (chars * GLYPH_WIDTH) : max)
 
+  // A wide, short item has a smaller `cqh`, so ceilings are taken from the
+  // label box itself rather than a fixed number tuned for tall containers.
+  const ceiling = Math.max(6, Math.min(11, height * 0.3))
   const numberChars = productNumber ? String(productNumber).length + 1 : 0
-  const numberSize = numberChars ? Math.max(4.5, fits(numberChars, 8.5)) : 0
+  const numberSize = numberChars ? Math.max(4.5, fits(numberChars, ceiling)) : 0
 
   // The ellipsis glyph is wider than an average character; count it as more.
   const measure = (line) => line.length + (line.endsWith('\u2026') ? 0.6 : 0)
@@ -271,7 +337,7 @@ export function labelTextSize(lines, productNumber, containerType = 'gallon') {
   // Whatever the number line leaves, split across the name lines.
   const heightBudget = (height - 4 - numberSize * 1.15) / (lineCount * 1.15)
   const nameSize = longest
-    ? Math.max(4.4, Math.min(fits(longest, 9), heightBudget))
+    ? Math.max(4.4, Math.min(fits(longest, ceiling), heightBudget))
     : 0
 
   return { nameSize: Number(nameSize.toFixed(2)), numberSize: Number(numberSize.toFixed(2)) }
@@ -315,12 +381,27 @@ export function groupByShelf(chemicals) {
     }))
 }
 
+/** Bays a chemical rack always shows, even with nothing standing in them. */
+export const STANDING_BAYS = ['gallon', 'can', 'barrel']
+
+/**
+ * Which bays to draw. Every type actually stocked gets one — otherwise an item
+ * filed here with, say, a glove-box icon would have nowhere to stand and would
+ * drop off the rack entirely — plus the standing bays when browsing.
+ */
+export function bayTypesFor(chemicals, { includeEmpty = false } = {}) {
+  const present = new Set(chemicals.map((chemical) => chemical.containerType))
+  return CONTAINER_TYPES.filter(
+    (type) => present.has(type) || (includeEmpty && STANDING_BAYS.includes(type)),
+  )
+}
+
 /**
  * The rack is organized into one bay per container type — gallons, cans and a
  * floor area for barrels — each with its own shelf levels, as sketched.
  */
-export function rackSections(chemicals, { includeEmpty = false } = {}) {
-  return CONTAINER_TYPES.map((containerType) => {
+export function rackSections(chemicals, { includeEmpty = false, types = CONTAINER_TYPES } = {}) {
+  return types.map((containerType) => {
     const items = chemicals.filter((chemical) => chemical.containerType === containerType)
     return {
       containerType,
@@ -332,9 +413,27 @@ export function rackSections(chemicals, { includeEmpty = false } = {}) {
   }).filter((section) => includeEmpty || section.chemicals.length > 0)
 }
 
+export function inArea(chemicals, area) {
+  return chemicals.filter((chemical) => chemical.area === area)
+}
+
+/** Per-area counts for the tabs: how much is here, and how much needs reordering. */
+export function areaSummary(chemicals) {
+  return AREAS.map((area) => {
+    const items = inArea(chemicals, area.id)
+    return {
+      ...area,
+      products: items.length,
+      containers: items.reduce((sum, chemical) => sum + chemical.quantity, 0),
+      lowStock: items.filter(isLowStock).length,
+    }
+  })
+}
+
 /** Shelf options offered in the add/edit forms, plus the next free shelf. */
-export function shelfOptions(chemicals) {
-  const used = [...new Set(chemicals.map((c) => String(c.shelf)))].sort(compareShelves)
+export function shelfOptions(chemicals, area) {
+  const scoped = area ? inArea(chemicals, area) : chemicals
+  const used = [...new Set(scoped.map((c) => String(c.shelf)))].sort(compareShelves)
   const numeric = used.map((s) => parseFloat(s)).filter(Number.isFinite)
   const next = String(numeric.length ? Math.max(...numeric) + 1 : 1)
   return used.includes(next) ? used : [...used, next]
@@ -405,6 +504,7 @@ export function toCsv(chemicals) {
     'Container Type',
     'Quantity',
     'Low Stock Threshold',
+    'Area',
     'Shelf',
     'Color',
     'Low Stock',
@@ -417,6 +517,7 @@ export function toCsv(chemicals) {
     chemical.containerType,
     chemical.quantity,
     chemical.lowStockThreshold,
+    areaById(chemical.area).label,
     chemical.shelf,
     chemical.color,
     isLowStock(chemical) ? 'YES' : 'NO',

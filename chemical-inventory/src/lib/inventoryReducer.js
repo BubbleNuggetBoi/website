@@ -12,7 +12,12 @@ import {
 import { createDefaultChemicals } from '../data/defaultChemicals.js'
 
 export function createInitialState(now = new Date().toISOString()) {
-  return { chemicals: createDefaultChemicals(now), history: [] }
+  // Normalized like any other input, so the seed can never be missing a field
+  // the rest of the app expects (the catalog lists only what it cares about).
+  return {
+    chemicals: createDefaultChemicals(now).map((chemical) => normalizeChemical(chemical, now)),
+    history: [],
+  }
 }
 
 /** Newest first, capped so localStorage cannot grow without bound. */

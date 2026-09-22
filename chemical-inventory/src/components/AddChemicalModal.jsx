@@ -1,7 +1,7 @@
 import Modal from './Modal.jsx'
 import ChemicalForm from './ChemicalForm.jsx'
 
-export default function AddChemicalModal({ shelves, onClose, onSubmit }) {
+export default function AddChemicalModal({ shelves, defaultArea, onClose, onSubmit }) {
   return (
     <Modal
       title="Add Chemical"
@@ -10,6 +10,7 @@ export default function AddChemicalModal({ shelves, onClose, onSubmit }) {
     >
       <ChemicalForm
         shelves={shelves}
+        defaultArea={defaultArea}
         submitLabel="Add To Rack"
         onCancel={onClose}
         onSubmit={onSubmit}

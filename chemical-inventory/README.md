@@ -15,6 +15,24 @@ npm run preview  # serve the production build
 npm test         # unit tests for the inventory logic (node:test)
 ```
 
+## Areas
+
+Tabs across the top switch between areas, each drawing its own rack from the
+products filed in it:
+
+- **Chemicals** — the steel rack, split into a bay per container type
+  (gallons, cans, a floor for barrels).
+- **Cabinet** — one white supply cabinet whose shelves hold whatever mix of
+  items sits on them, with painter's-tape labels on the shelf edges. Shelves
+  are named, not numbered (`Gloves`, `Tyvek`), because that is how the real
+  cabinet is labelled; prefix a name with a number to force the order.
+
+A product carries an `area`, so moving one between tabs is an edit, not a
+migration. Low-stock counts ride on each tab, so something running out in the
+cabinet is visible while you are looking at the chemicals, and a search tells
+you when the match is in the other tab. Adding an area means one entry in
+`AREAS` (id, label, and `bays` or `shelves` layout).
+
 ## How it works
 
 - One container per product on the rack, never one per unit. 18 gallons of
@@ -28,6 +46,11 @@ npm test         # unit tests for the inventory logic (node:test)
   supported; nothing about the rack is hard-coded to the current catalog.
 - Each row of a shelf gets its own deck board, so on a phone the rack grows
   taller instead of shrinking containers below a tappable size.
+- Seven icons to choose from when adding a product — gallon jug, can, barrel,
+  glove box, long box, suit, mop head — picked from a visual grid rather than a
+  dropdown. Each is drawn in a viewBox matching its own proportions, so a long
+  flat carton lies wide and short on the shelf while a jug stands tall, and
+  every label stays glued to its front face.
 - Each product can carry a contents color, which tints the container and its
   label: a pink chemical reads as pink on the shelf. Jugs are translucent, so
   the color shows through the plastic and deepens below the fill line; cans and
@@ -88,7 +111,8 @@ src/
     Shelf.jsx                one shelf level (or floor row), wrapping into
                              rows that each get a deck board
     ChemicalContainer.jsx    one product on the shelf (art, label, badge, flags)
-    ContainerArt.jsx         SVG jug, can and barrel silhouettes
+    ContainerArt.jsx         SVG silhouettes for all seven item types
+    AreaTabs.jsx             the area tabs, with per-area low-stock counts
     ChemicalModal.jsx        product window: facts, stock controls, history
     StockControls.jsx        large -1 / +1 steppers and Set Quantity
     AddChemicalModal.jsx     add a new chemical to the rack
@@ -143,19 +167,22 @@ The UI never touches storage directly. To move off `localStorage`:
    and keeps the reducer as the optimistic local cache. Component props do not
    change.
 
-### Adding a container type
+### Adding an item type
 
-Container types are data, not special cases. Add the name to `CONTAINER_TYPES`
-with an entry in `CONTAINER_LABELS` (names and the unit word) and
-`CONTAINER_ART` (the art's aspect ratio and where its label sits), add a filter
-to `FILTERS`, and draw the silhouette in `ContainerArt.jsx`. The rack grows a
-bay for it, the forms offer it, and the filter works — `src/test` asserts that
-every entry in `FILTERS` actually narrows the list, so a half-wired type fails
-the suite.
+Item types are data, not special cases. Add the name to `CONTAINER_TYPES` with
+an entry in `CONTAINER_LABELS` (names and the unit word) and `CONTAINER_ART`
+(the aspect ratio and where its label sits), then draw the silhouette in
+`ContainerArt.jsx` in a viewBox with that same aspect. The icon picker offers
+it, the filters pick it up, and `bayTypesFor` gives it a bay so nothing filed
+with it can drop off the rack.
 
-`npm test` covers the logic layer (80 tests): seeding, quantity math and
+Two tests guard the wiring: every filter chip an area offers has to actually
+narrow the list (a half-wired type fails), and every product has to land in a
+bay when the rack is drawn.
+
+`npm test` covers the logic layer (89 tests): seeding, quantity math and
 clamping, history recording and capping, search/filter across every container
-type, bay and shelf grouping and sorting, contents-color parsing and label
+type and area, bay and shelf grouping and sorting, contents-color parsing and label
 contrast, label text fitting, CSV export, recovery from corrupt saved data, and
 the shared-copy serializer (round trips, `<` escaping, and rebuilding a page
 that can rebuild itself again).

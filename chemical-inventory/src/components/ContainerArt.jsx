@@ -1,6 +1,7 @@
 /**
- * SVG silhouettes for the three container types we stock: a gallon jug with a
- * moulded handle slot, a slim cylindrical can, and a drum for barrels.
+ * SVG silhouettes for everything we stock: a gallon jug with a moulded handle
+ * slot, a slim cylindrical can, a drum, a glove dispenser box, a long flat
+ * carton, a folded protective suit and a mop head.
  *
  * Each type is drawn in its own viewBox sized to the container itself (see
  * CONTAINER_ART in lib/inventory.js), so the shapes keep their real
@@ -220,7 +221,216 @@ export function ChemicalBarrel({ contents = '' }) {
   )
 }
 
-const ART = { gallon: GallonJug, can: ChemicalCan, barrel: ChemicalBarrel }
+/**
+ * Mop head: socket and collar up top, then strands fanning out and down. The
+ * strands are generated rather than hand-drawn so the fan stays even.
+ * Every viewBox below is sized to its CONTAINER_ART aspect, so the drawing
+ * fills the art box exactly and the product label lands where it should.
+ */
+const MOP_STRANDS = Array.from({ length: 13 }, (_, index) => {
+  const t = index / 12
+  const lean = (t - 0.5) * 2 // -1 at the left edge, +1 at the right
+  return {
+    top: 36 + t * 30, // leaves the collar
+    bottom: 6 + t * 90, // hangs out here
+    tip: 128 - lean ** 2 * 20, // outer strands hang shorter
+    width: 4.3 - Math.abs(lean) * 0.7,
+  }
+})
+
+export function MopHead({ contents = '' }) {
+  const strands = contents || '#f2f5f7'
+  return (
+    <svg
+      className="art art--mop"
+      viewBox="0 0 106 132"
+      role="img"
+      aria-label="Mop head"
+      preserveAspectRatio="xMidYMax meet"
+    >
+      {MOP_STRANDS.map((strand, index) => {
+        const w = strand.width
+        const d =
+          `M${strand.top} 22 C${strand.top} 56 ${strand.bottom} 84 ${strand.bottom} ${strand.tip - 9} ` +
+          `Q${strand.bottom} ${strand.tip} ${strand.bottom + w} ${strand.tip} ` +
+          `Q${strand.bottom + w * 2} ${strand.tip} ${strand.bottom + w * 2} ${strand.tip - 9} ` +
+          `C${strand.bottom + w * 2} 84 ${strand.top + w * 2} 56 ${strand.top + w * 2} 22 Z`
+        return (
+          <path
+            key={index}
+            d={d}
+            fill={strands}
+            stroke={OUTLINE}
+            strokeWidth="2"
+            strokeLinejoin="round"
+          />
+        )
+      })}
+
+      {/* collar clamping the strand tops */}
+      <path d="M34 14 L72 14 L78 32 L28 32 Z" fill="#e4e9ed" />
+      <path d="M34 14 L72 14 L78 32 L28 32 Z" fill={`url(#${SHADE_ID})`} />
+      <path
+        d="M34 14 L72 14 L78 32 L28 32 Z"
+        fill="none"
+        stroke={OUTLINE}
+        strokeWidth="2.4"
+        strokeLinejoin="round"
+      />
+
+      {/* socket the handle screws into */}
+      <rect x="41" y="3" width="24" height="12" rx="1.5" fill="#e4e9ed" />
+      <rect x="41" y="3" width="24" height="12" rx="1.5" fill={`url(#${GLOSS_ID})`} />
+      <rect
+        x="41"
+        y="3"
+        width="24"
+        height="12"
+        rx="1.5"
+        fill="none"
+        stroke={OUTLINE}
+        strokeWidth="2.2"
+      />
+      <ellipse cx="53" cy="4" rx="12" ry="3.4" fill="#c3ccd4" stroke={OUTLINE} strokeWidth="2" />
+    </svg>
+  )
+}
+
+/** Folded coverall, hood on top, as it sits stacked on the shelf. */
+export function ProtectiveSuit({ contents = '' }) {
+  const fabric = contents || '#eef2f5'
+  const HOOD = 'M42 50 Q36 11 63.5 9 Q91 11 85 50 Z'
+  const BODY =
+    'M6 64 Q6 50 30 47 L97 47 Q121 50 121 64 L121 110 L6 110 Z'
+  const FOLD = 'M4 110 Q4 124 18 124 L109 124 Q123 124 123 110 Z'
+  return (
+    <svg
+      className="art art--suit"
+      viewBox="0 0 127 132"
+      role="img"
+      aria-label="Protective suit"
+      preserveAspectRatio="xMidYMax meet"
+    >
+      {/* hood, with the face opening reading as a shadow */}
+      <path d={HOOD} fill={fabric} stroke={OUTLINE} strokeWidth="2.4" strokeLinejoin="round" />
+      {/* face opening: a flatter oval, shaded rather than punched out */}
+      <path
+        d="M50 27 Q50 18 63.5 18 Q77 18 77 27 Q77 39 63.5 39 Q50 39 50 27 Z"
+        fill="#2b343c"
+        fillOpacity="0.7"
+        stroke={OUTLINE}
+        strokeWidth="2"
+      />
+      {/* hood seam */}
+      <path d="M63.5 9 L63.5 18" stroke={OUTLINE} strokeWidth="2" strokeOpacity="0.6" />
+
+      {/* folded body */}
+      <path d={BODY} fill={fabric} />
+      <path d={BODY} fill={`url(#${SHEEN_ID})`} />
+      <path d={BODY} fill="none" stroke={OUTLINE} strokeWidth="2.6" strokeLinejoin="round" />
+      {/* zip seam down the middle */}
+      <path d="M63.5 47 L63.5 110" stroke={OUTLINE} strokeWidth="2.2" strokeOpacity="0.65" />
+      {/* sleeve folds */}
+      <path
+        d="M26 56 L26 106 M101 56 L101 106"
+        stroke={OUTLINE}
+        strokeWidth="2"
+        strokeOpacity="0.5"
+      />
+
+      {/* the rolled edge of the stack */}
+      <path d={FOLD} fill={fabric} />
+      <path d={FOLD} fill={`url(#${SHADE_ID})`} />
+      <path d={FOLD} fill="none" stroke={OUTLINE} strokeWidth="2.4" strokeLinejoin="round" />
+      <path d="M4 117 L123 117" stroke={OUTLINE} strokeWidth="1.8" strokeOpacity="0.45" />
+    </svg>
+  )
+}
+
+/** Dispenser box with a glove pulled through the slot on top. */
+export function GloveBox({ contents = '' }) {
+  const box = contents || '#eceff2'
+  const FRONT = 'M8 62 L96 62 L96 122 L8 122 Z'
+  const TOP = 'M8 62 L30 44 L118 44 L96 62 Z'
+  const SIDE = 'M96 62 L118 44 L118 104 L96 122 Z'
+  return (
+    <svg
+      className="art art--glovebox"
+      viewBox="0 0 139 132"
+      role="img"
+      aria-label="Box of gloves"
+      preserveAspectRatio="xMidYMax meet"
+    >
+      {/* the glove, drawn first so the box top overlaps its cuff */}
+      <path
+        d="M58 54 L58 34 Q58 27 63 27 Q68 27 68 34 L68 21 Q68 13 73.5 13 Q79 13 79 21 L79 24
+           Q79 15 84 15 Q89 15 89 24 L89 34 Q92 28 96 30 Q100 33 97 39 L90 55 Z"
+        fill="#f6f8fa"
+        stroke={OUTLINE}
+        strokeWidth="2.4"
+        strokeLinejoin="round"
+      />
+
+      <path d={TOP} fill={box} />
+      <path d={TOP} fill="#ffffff" fillOpacity="0.14" />
+      <path d={TOP} fill="none" stroke={OUTLINE} strokeWidth="2.4" strokeLinejoin="round" />
+      <path d={SIDE} fill={box} />
+      <path d={SIDE} fill="#000000" fillOpacity="0.22" />
+      <path d={SIDE} fill="none" stroke={OUTLINE} strokeWidth="2.4" strokeLinejoin="round" />
+      <path d={FRONT} fill={box} />
+      <path d={FRONT} fill={`url(#${SHEEN_ID})`} />
+      <path d={FRONT} fill="none" stroke={OUTLINE} strokeWidth="2.6" strokeLinejoin="round" />
+
+      {/* dispensing slot the glove comes through */}
+      <path
+        d="M52 55 Q73 49 92 54"
+        fill="none"
+        stroke={OUTLINE}
+        strokeWidth="2.2"
+        strokeOpacity="0.75"
+      />
+    </svg>
+  )
+}
+
+/** Long flat carton, the way tape, blades, plugs and masks come boxed. */
+export function LongBox({ contents = '' }) {
+  const box = contents || '#eceff2'
+  const FRONT = 'M8 74 L176 74 L176 120 L8 120 Z'
+  const TOP = 'M8 74 L40 48 L208 48 L176 74 Z'
+  const SIDE = 'M176 74 L208 48 L208 94 L176 120 Z'
+  return (
+    <svg
+      className="art art--longbox"
+      viewBox="0 0 224 132"
+      role="img"
+      aria-label="Long box"
+      preserveAspectRatio="xMidYMax meet"
+    >
+      <path d={TOP} fill={box} />
+      <path d={TOP} fill="#ffffff" fillOpacity="0.14" />
+      <path d={TOP} fill="none" stroke={OUTLINE} strokeWidth="2.4" strokeLinejoin="round" />
+      <path d={SIDE} fill={box} />
+      <path d={SIDE} fill="#000000" fillOpacity="0.22" />
+      <path d={SIDE} fill="none" stroke={OUTLINE} strokeWidth="2.4" strokeLinejoin="round" />
+      <path d={FRONT} fill={box} />
+      <path d={FRONT} fill={`url(#${SHEEN_ID})`} />
+      <path d={FRONT} fill="none" stroke={OUTLINE} strokeWidth="2.6" strokeLinejoin="round" />
+      {/* lid seam along the top edge */}
+      <path d="M8 82 L176 82" stroke={OUTLINE} strokeWidth="1.8" strokeOpacity="0.3" />
+    </svg>
+  )
+}
+
+const ART = {
+  gallon: GallonJug,
+  can: ChemicalCan,
+  barrel: ChemicalBarrel,
+  gloveBox: GloveBox,
+  longBox: LongBox,
+  suit: ProtectiveSuit,
+  mop: MopHead,
+}
 
 export function ContainerIcon({ containerType, contents }) {
   const Art = ART[containerType] ?? GallonJug

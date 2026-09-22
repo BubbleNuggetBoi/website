@@ -1,13 +1,16 @@
 import { useState } from 'react'
 import {
+  AREAS,
+  CONTAINER_ART,
   CONTAINER_LABELS,
   CONTAINER_TYPES,
   PRODUCT_COLORS,
   normalizeColor,
   toQuantity,
 } from '../lib/inventory.js'
+import { ContainerIcon } from './ContainerArt.jsx'
 
-function initialValues(chemical) {
+function initialValues(chemical, defaultArea) {
   return {
     name: chemical?.name ?? '',
     productNumber: chemical?.productNumber ?? '',
@@ -15,6 +18,7 @@ function initialValues(chemical) {
     quantity: String(chemical?.quantity ?? 0),
     lowStockThreshold: String(chemical?.lowStockThreshold ?? 2),
     shelf: String(chemical?.shelf ?? '1'),
+    area: chemical?.area ?? defaultArea ?? 'chemicals',
     color: normalizeColor(chemical?.color),
   }
 }
@@ -25,13 +29,14 @@ function initialValues(chemical) {
  */
 export default function ChemicalForm({
   chemical,
+  defaultArea,
   shelves = [],
   submitLabel = 'Save',
   onSubmit,
   onCancel,
   secondaryAction,
 }) {
-  const [values, setValues] = useState(() => initialValues(chemical))
+  const [values, setValues] = useState(() => initialValues(chemical, defaultArea))
   const [error, setError] = useState('')
 
   const set = (key) => (event) => {
@@ -52,6 +57,7 @@ export default function ChemicalForm({
       quantity: toQuantity(values.quantity, 0),
       lowStockThreshold: toQuantity(values.lowStockThreshold, 2),
       shelf: values.shelf.trim() || '1',
+      area: values.area,
       color: normalizeColor(values.color),
     })
   }
@@ -103,19 +109,50 @@ export default function ChemicalForm({
       </div>
 
       <fieldset className="field field--fieldset">
-        <legend className="field__label">Container Type</legend>
+        <legend className="field__label">Area</legend>
         <div className="segmented segmented--lg">
-          {CONTAINER_TYPES.map((type) => (
+          {AREAS.map((area) => (
             <button
-              key={type}
+              key={area.id}
               type="button"
-              className={`segmented__btn${values.containerType === type ? ' is-active' : ''}`}
-              aria-pressed={values.containerType === type}
-              onClick={() => setValues((current) => ({ ...current, containerType: type }))}
+              className={`segmented__btn${values.area === area.id ? ' is-active' : ''}`}
+              aria-pressed={values.area === area.id}
+              onClick={() => setValues((current) => ({ ...current, area: area.id }))}
             >
-              {CONTAINER_LABELS[type].one}
+              {area.label}
             </button>
           ))}
+        </div>
+      </fieldset>
+
+      <fieldset className="field field--fieldset">
+        <legend className="field__label">
+          Icon <span className="field__hint">how it looks on the shelf</span>
+        </legend>
+        <div className="icon-picker">
+          {CONTAINER_TYPES.map((type) => {
+            const active = values.containerType === type
+            return (
+              <button
+                key={type}
+                type="button"
+                className={`icon-option${active ? ' is-active' : ''}`}
+                aria-pressed={active}
+                aria-label={CONTAINER_LABELS[type].one}
+                onClick={() => setValues((current) => ({ ...current, containerType: type }))}
+              >
+                <span
+                  className="icon-option__art"
+                  // the drawing is decorative here: the button is already named
+                  aria-hidden="true"
+                  style={{ '--art-aspect': CONTAINER_ART[type].aspect }}
+                >
+                  <ContainerIcon containerType={type} contents={values.color} />
+                </span>
+                <span className="icon-option__name">{CONTAINER_LABELS[type].one}</span>
+              </button>
+            )
+          })}
         </div>
       </fieldset>
 

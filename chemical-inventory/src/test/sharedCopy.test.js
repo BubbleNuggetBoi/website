@@ -17,7 +17,7 @@ describe('serializing the shared inventory', () => {
   it('round trips the counts and history', () => {
     const state = sample()
     const restored = parseEmbeddedState(serializeState(state).replace(/\\u003c/g, '<'))
-    assert.equal(restored.chemicals.length, 25)
+    assert.equal(restored.chemicals.length, 34)
     assert.equal(restored.chemicals.find((c) => c.id === 'seed-1').quantity, 18)
     assert.equal(restored.history.length, 1)
   })

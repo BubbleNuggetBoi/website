@@ -1,7 +1,12 @@
-import { FILTERS } from '../lib/inventory.js'
-
 /** Search by name or product number, plus the container / low-stock filters. */
-export default function SearchAndFilters({ search, onSearchChange, filter, onFilterChange, counts }) {
+export default function SearchAndFilters({
+  search,
+  onSearchChange,
+  filter,
+  onFilterChange,
+  filters,
+  counts,
+}) {
   return (
     <div className="toolbar">
       <div className="search">
@@ -35,7 +40,7 @@ export default function SearchAndFilters({ search, onSearchChange, filter, onFil
       </div>
 
       <div className="segmented segmented--filters" role="group" aria-label="Filter chemicals">
-        {FILTERS.map((option) => (
+        {filters.map((option) => (
           <button
             key={option.id}
             type="button"

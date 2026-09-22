@@ -8,13 +8,20 @@ import EditChemicalModal from './components/EditChemicalModal.jsx'
 import HistoryModal from './components/HistoryModal.jsx'
 import SettingsModal from './components/SettingsModal.jsx'
 import ConfirmDialog from './components/ConfirmDialog.jsx'
+import AreaTabs from './components/AreaTabs.jsx'
 import { ContainerArtDefs } from './components/ContainerArt.jsx'
 import { useInventory } from './hooks/useInventory.js'
 import { downloadFile } from './lib/storage.js'
 import {
+  AREA_IDS,
+  areaById,
+  areaSummary,
   filterChemicals,
+  filtersFor,
+  inArea,
   inventoryStats,
   isLowStock,
+  matchesSearch,
   shelfOptions,
   toCsv,
   toJsonExport,
@@ -30,32 +37,53 @@ export default function App() {
 
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('all')
+  const [area, setArea] = useState(AREA_IDS[0])
 
   // One piece of view state per overlay; `view` holds the stacked dialog.
   const [selectedId, setSelectedId] = useState(null)
   const [view, setView] = useState(null) // 'add' | 'edit' | 'history' | 'settings'
   const [confirm, setConfirm] = useState(null) // { kind: 'delete' | 'reset' | 'clearHistory' }
 
-  const visible = useMemo(() => filterChemicals(chemicals, { search, filter }), [
-    chemicals,
+  // Everything below the tabs works within the active area.
+  const areaChemicals = useMemo(() => inArea(chemicals, area), [chemicals, area])
+
+  const visible = useMemo(() => filterChemicals(areaChemicals, { search, filter }), [
+    areaChemicals,
     search,
     filter,
   ])
 
   const stats = useMemo(() => inventoryStats(chemicals), [chemicals])
+  const areas = useMemo(() => areaSummary(chemicals), [chemicals])
+  const filters = useMemo(() => filtersFor(chemicals, area), [chemicals, area])
 
-  const counts = useMemo(
-    () => ({
-      all: chemicals.length,
-      gallon: chemicals.filter((chemical) => chemical.containerType === 'gallon').length,
-      can: chemicals.filter((chemical) => chemical.containerType === 'can').length,
-      barrel: chemicals.filter((chemical) => chemical.containerType === 'barrel').length,
-      low: chemicals.filter(isLowStock).length,
-    }),
-    [chemicals],
-  )
+  const counts = useMemo(() => {
+    const byId = { all: areaChemicals.length, low: areaChemicals.filter(isLowStock).length }
+    for (const chemical of areaChemicals) {
+      byId[chemical.containerType] = (byId[chemical.containerType] ?? 0) + 1
+    }
+    return byId
+  }, [areaChemicals])
 
-  const shelves = useMemo(() => shelfOptions(chemicals), [chemicals])
+  // A search is easy to mistake for "we don't stock it" when the match is
+  // sitting in the other tab, so count those too.
+  const elsewhere = useMemo(() => {
+    if (!search.trim()) return null
+    const hits = areas
+      .filter((other) => other.id !== area)
+      .map((other) => ({
+        ...other,
+        matches: inArea(chemicals, other.id).filter((chemical) => matchesSearch(chemical, search))
+          .length,
+      }))
+      .filter((other) => other.matches > 0)
+    return hits.length ? hits[0] : null
+  }, [areas, area, chemicals, search])
+
+  const shelves = useMemo(() => shelfOptions(chemicals, area), [chemicals, area])
+
+  // Switching tabs can strip the active filter (no cans in the cabinet).
+  const activeFilter = filters.some((option) => option.id === filter) ? filter : 'all'
 
   const selected = selectedId ? inventory.findChemical(selectedId) : null
   // A deleted product cannot stay open.
@@ -71,11 +99,14 @@ export default function App() {
   const handleAdd = (values) => {
     inventory.addChemical(values)
     setView(null)
+    // Follow the product to wherever it was filed.
+    if (values.area && values.area !== area) setArea(values.area)
   }
 
   const handleEditSubmit = (values) => {
     inventory.updateChemical(selected.id, values)
     setView(null)
+    if (values.area && values.area !== area) setArea(values.area)
   }
 
   const handleConfirm = () => {
@@ -93,6 +124,7 @@ export default function App() {
       setSelectedId(null)
       setSearch('')
       setFilter('all')
+      setArea(AREA_IDS[0])
       return
     }
     if (confirm?.kind === 'clearHistory') {
@@ -104,10 +136,10 @@ export default function App() {
   }
 
   const emptyState =
-    chemicals.length === 0 ? (
+    areaChemicals.length === 0 ? (
       <>
-        <strong>The rack is empty.</strong>
-        <span>Use + Add Chemical to stock the first product.</span>
+        <strong>Nothing in {areaById(area).label} yet.</strong>
+        <span>Use + Add Chemical to stock the first product here.</span>
       </>
     ) : (
       <>
@@ -165,35 +197,46 @@ export default function App() {
       />
 
       <main className="main">
+        <AreaTabs areas={areas} activeArea={area} onSelectArea={setArea} />
+
         <SearchAndFilters
           search={search}
           onSearchChange={setSearch}
-          filter={filter}
+          filter={activeFilter}
           onFilterChange={setFilter}
+          filters={filters}
           counts={counts}
         />
 
         <div className="main__meta">
           <span>
-            Showing {visible.length} of {chemicals.length} products
+            Showing {visible.length} of {areaChemicals.length} in {areaById(area).label}
           </span>
-          {stats.lowStock > 0 && filter !== 'low' ? (
+          {counts.low > 0 && activeFilter !== 'low' ? (
             <button type="button" className="link-btn" onClick={() => setFilter('low')}>
-              {stats.lowStock} need reordering
+              {counts.low} need reordering
+            </button>
+          ) : null}
+          {elsewhere ? (
+            <button type="button" className="link-btn" onClick={() => setArea(elsewhere.id)}>
+              {elsewhere.matches} more in {elsewhere.label} &rarr;
             </button>
           ) : null}
         </div>
 
         <ChemicalRack
           chemicals={visible}
+          area={area}
           onSelectChemical={(id) => {
             setView(null)
             setSelectedId(id)
           }}
           emptyState={emptyState}
           // Bays with nothing in them still show while browsing, so an empty
-          // barrel area is visibly ready to fill.
-          showEmptyBays={filter === 'all' && search.trim() === '' && chemicals.length > 0}
+          // barrel floor is visibly ready to fill.
+          showEmptyBays={
+            activeFilter === 'all' && search.trim() === '' && areaChemicals.length > 0
+          }
         />
 
         <p className="footnote">
@@ -218,7 +261,13 @@ export default function App() {
       ) : null}
 
       {view === 'add' && canEdit ? (
-        <AddChemicalModal shelves={shelves} onClose={() => setView(null)} onSubmit={handleAdd} />
+        <AddChemicalModal
+          shelves={shelves}
+          // new products land in the tab you are standing in
+          defaultArea={area}
+          onClose={() => setView(null)}
+          onSubmit={handleAdd}
+        />
       ) : null}
 
       {editing && canEdit ? (

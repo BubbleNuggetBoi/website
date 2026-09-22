@@ -9,7 +9,7 @@ const reduce = (state, ...actions) => actions.reduce(inventoryReducer, state)
 describe('initial state', () => {
   it('seeds the catalog with no history', () => {
     const state = createInitialState()
-    assert.equal(state.chemicals.length, 25)
+    assert.equal(state.chemicals.length, 34)
     assert.deepEqual(state.history, [])
   })
 })
@@ -216,7 +216,7 @@ describe('delete and reset', () => {
       { type: 'add', chemical: { name: 'Custom', quantity: 5 } },
       { type: 'reset' },
     )
-    assert.equal(state.chemicals.length, 25)
+    assert.equal(state.chemicals.length, 34)
     assert.equal(state.history.length, 0)
     assert.ok(state.chemicals.every((c) => c.quantity === 0))
   })
@@ -245,7 +245,7 @@ describe('persistence round trip', () => {
       { type: 'add', chemical: { name: 'Shop Solvent', shelf: '5', quantity: 2 } },
     )
     const restored = parseState(JSON.stringify(saved))
-    assert.equal(restored.chemicals.length, 26)
+    assert.equal(restored.chemicals.length, 35)
     assert.equal(restored.chemicals.find((c) => c.id === 'seed-1').quantity, 18)
     assert.equal(restored.history.length, 2)
     assert.ok(STORAGE_KEY.length > 0)
